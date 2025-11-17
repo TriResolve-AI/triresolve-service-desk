@@ -1,0 +1,87 @@
+[
+  {
+    "name": "bug",
+    "color": "d7263d",
+    "description": "A defect or unintended behavior."
+  },
+  {
+    "name": "feature",
+    "color": "1eb5a6",
+    "description": "New functionality or enhancement."
+  },
+  {
+    "name": "runbook",
+    "color": "7a3fff",
+    "description": "Runbook creation, modifications, or debugging."
+  },
+  {
+    "name": "ai-ml",
+    "color": "3c2a90",
+    "description": "Agent logic, datasets, model tuning, or ML pipelines."
+  },
+  {
+    "name": "backend",
+    "color": "2d7ff9",
+    "description": "API, agent routing, backend logic, integrations."
+  },
+  {
+    "name": "frontend",
+    "color": "c7dfff",
+    "description": "UI/UX, wireframes, design elements, presentation."
+  },
+  {
+    "name": "documentation",
+    "color": "6e7a8a",
+    "description": "README, repo structure, docs, onboarding updates."
+  },
+  {
+    "name": "triage",
+    "color": "fbc02d",
+    "description": "Needs review, assignment, or clarification."
+  },
+  {
+    "name": "good first issue",
+    "color": "cbd5e1",
+    "description": "Onboarding-friendly task for new contributors."
+  },
+  {
+    "name": "priority:high",
+    "color": "d7263d",
+    "description": "Needs immediate attention — hackathon critical."
+  },
+  {
+    "name": "priority:medium",
+    "color": "fbc02d",
+    "description": "Important but not blocking progress."
+  },
+  {
+    "name": "priority:low",
+    "color": "1eb5a6",
+    "description": "Nice-to-have or stretch work."
+  },
+  {
+    "name": "design",
+    "color": "ff9800",
+    "description": "UI mockups, visuals, branding, diagrams."
+  },
+  {
+    "name": "refactor",
+    "color": "6e7a8a",
+    "description": "Code cleanup or restructuring."
+  },
+  {
+    "name": "hackathon",
+    "color": "7a3fff",
+    "description": "Tasks specific to Microsoft × Women in Cloud."
+  },
+  {
+    "name": "blocked",
+    "color": "d7263d",
+    "description": "Blocked by dependency or external factor."
+  },
+  {
+    "name": "discussion",
+    "color": "cbd5e1",
+    "description": "Team decision or strategy needed."
+  }
+]
