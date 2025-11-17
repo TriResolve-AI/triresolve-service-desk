@@ -169,21 +169,6 @@ TriResolve AI demonstrates:
 
 ## 🫂 Team TriResolve AI
 
-✔ It Includes:
-
-Team banner
-
-Team icons
-
-Country flags
-
-Roles
-
-GitHub + LinkedIn
-
-Professional + aesthetic layout
-
-
 🫂 Team TriResolve AI
 
 A globally distributed, AI-powered hackathon team collaborating across three countries.
