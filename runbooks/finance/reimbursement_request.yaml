@@ -1,0 +1,26 @@
+action: reimbursement_request
+description: Process employee expense reimbursement
+steps:
+  - validate_employee:
+      check_employment_status: true
+      verify_department: true
+  - verify_expense_documentation:
+      receipt_required: true
+      amount_threshold: 25
+  - check_policy_compliance:
+      expense_categories: true
+      approval_limits: true
+  - route_for_approval:
+      manager: true
+      finance: conditional
+      amount_threshold: 500
+  - process_payment:
+      system: finance_system
+      payment_method: direct_deposit
+  - notify_employee:
+      message: "Your reimbursement has been processed."
+      include_timeline: true
+success_criteria:
+  - expense_approved: true
+  - payment_processed: true
+  - employee_notified: true

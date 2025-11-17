@@ -1,0 +1,27 @@
+action: payroll_inquiry
+description: Address payroll-related questions
+steps:
+  - authenticate_employee:
+      verification_method: multi_factor
+      required: true
+  - identify_inquiry_type:
+      categories:
+        - pay_stub
+        - tax_withholding
+        - direct_deposit
+        - salary_adjustment
+  - retrieve_payroll_data:
+      system: payroll_system
+      include_ytd: true
+  - verify_calculations:
+      check_deductions: true
+      tax_withholding: true
+  - provide_information:
+      format: detailed
+      include_contacts: true
+  - log_inquiry:
+      tracking_system: finance_ticketing
+success_criteria:
+  - information_provided: true
+  - inquiry_resolved: true
+  - inquiry_logged: true

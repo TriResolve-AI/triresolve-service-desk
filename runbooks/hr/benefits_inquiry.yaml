@@ -1,0 +1,24 @@
+action: benefits_inquiry
+description: Answer employee benefits questions
+steps:
+  - identify_benefit_type:
+      categories:
+        - health
+        - dental
+        - vision
+        - retirement
+        - life_insurance
+  - retrieve_policy_documents:
+      system: benefits_portal
+      include_coverage: true
+  - check_enrollment_status:
+      verify_eligibility: true
+      open_enrollment_dates: true
+  - provide_information:
+      format: summary
+      include_contacts: true
+  - log_inquiry:
+      tracking_system: hr_ticketing
+success_criteria:
+  - information_provided: true
+  - inquiry_logged: true

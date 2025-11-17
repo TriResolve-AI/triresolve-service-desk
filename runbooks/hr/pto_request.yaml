@@ -1,0 +1,25 @@
+action: pto_request
+description: Process employee PTO request
+steps:
+  - validate_employee:
+      check_employment_status: true
+      verify_tenure: true
+  - check_pto_balance:
+      system: hr_system
+      include_accruals: true
+  - verify_coverage:
+      team: true
+      blackout_dates: true
+  - submit_approval:
+      manager: true
+      hr: conditional
+  - update_calendar:
+      sync_outlook: true
+      team_calendar: true
+  - notify_employee:
+      message: "Your PTO request has been processed."
+      include_balance: true
+success_criteria:
+  - request_approved: true
+  - calendar_updated: true
+  - employee_notified: true

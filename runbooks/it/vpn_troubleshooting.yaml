@@ -1,0 +1,24 @@
+action: vpn_troubleshooting
+description: Diagnose and resolve VPN connectivity issues
+steps:
+  - check_vpn_status:
+      endpoint: vpn_server
+      verify_connectivity: true
+  - validate_user_credentials:
+      system: ldap
+      check_expiration: true
+  - verify_network_access:
+      firewall_rules: true
+      port_check: [443, 1194]
+  - reset_vpn_profile:
+      backup_current: true
+      deploy_new: true
+  - test_connection:
+      attempts: 3
+      wait_between: 10
+  - notify_user:
+      message: "VPN issue resolved. Please try connecting again."
+      include_instructions: true
+success_criteria:
+  - vpn_connected: true
+  - user_notified: true
