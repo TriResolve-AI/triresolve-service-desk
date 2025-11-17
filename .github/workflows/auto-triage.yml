@@ -8,28 +8,31 @@ permissions:
   issues: write
 
 jobs:
-  add-triage-label:
+  triage:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Add or apply triage label via REST
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          ISSUE_NUMBER=${{ github.event.issue.number }}
+          OWNER=${{ github.repository_owner }}
+          REPO=${{ github.event.repository.name }}
+          LABEL_NAME='status: needs triage'
+          LABEL_COLOR='FFA500'
+          LABEL_DESC='Issue requires triage'
 
-      - name: "Add status: needs triage label to new issues"
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const issue_number = context.payload.issue.number;
-            const labelName = 'status: needs triage';
-            try {
-              const labels = await github.paginate(github.rest.issues.listLabelsForRepo, { owner, repo, per_page: 100 });
-              if (!labels.find(l => l.name === labelName)) {
-                await github.rest.issues.createLabel({ owner, repo, name: labelName, color: 'FFA500', description: 'Issue requires triage' });
-              }
-            } catch (err) {
-              console.log(`Label check/create failed: ${err.message}`);
-            }
+          # Create the label if it doesn't exist (ignore failures)
+          curl -s -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -d "{\"name\":\"${LABEL_NAME}\",\"color\":\"${LABEL_COLOR}\",\"description\":\"${LABEL_DESC}\"}" \
+            "https://api.github.com/repos/${OWNER}/${REPO}/labels" || true
 
-            await github.rest.issues.addLabels({ owner, repo, issue_number, labels: [labelName] });
+          # Add the label to the issue
+          curl -s -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -d "[\"${LABEL_NAME}\"]" \
+            "https://api.github.com/repos/${OWNER}/${REPO}/issues/${ISSUE_NUMBER}/labels"
