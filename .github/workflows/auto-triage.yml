@@ -1,0 +1,35 @@
+name: Auto Triage New Issues
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  add-triage-label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Add 'status: needs triage' label to new issues
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issue_number = context.payload.issue.number;
+            const labelName = 'status: needs triage';
+            try {
+              const labels = await github.paginate(github.rest.issues.listLabelsForRepo, { owner, repo, per_page: 100 });
+              if (!labels.find(l => l.name === labelName)) {
+                await github.rest.issues.createLabel({ owner, repo, name: labelName, color: 'FFA500', description: 'Issue requires triage' });
+              }
+            } catch (err) {
+              console.log(`Label check/create failed: ${err.message}`);
+            }
+
+            await github.rest.issues.addLabels({ owner, repo, issue_number, labels: [labelName] });
