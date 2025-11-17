@@ -1,0 +1,62 @@
+name: Sync GitHub Labels
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+    paths:
+      - ".github/labels.json"
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  sync-labels:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Sync labels from JSON
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const content = fs.readFileSync('.github/labels.json', 'utf8');
+            const labels = JSON.parse(content || '[]');
+
+            // Fetch existing labels (paginated)
+            const existing = await github.paginate(github.rest.issues.listLabelsForRepo, { owner, repo, per_page: 100 });
+            const existingMap = new Map(existing.map(l => [l.name, l]));
+            const desiredNames = new Set(labels.map(l => l.name));
+
+            // Create or update labels from JSON
+            for (const label of labels) {
+              if (existingMap.has(label.name)) {
+                await github.rest.issues.updateLabel({ owner, repo, name: label.name, new_name: label.name, color: label.color, description: label.description || '' });
+                core && core.info && core.info(`Updated label: ${label.name}`);
+              } else {
+                await github.rest.issues.createLabel({ owner, repo, name: label.name, color: label.color, description: label.description || '' });
+                core && core.info && core.info(`Created label: ${label.name}`);
+              }
+            }
+
+            // Optionally remove labels that are not present in labels.json
+            // Protect some commonly used community labels
+            const protectedLabels = new Set(['good first issue', 'help wanted']);
+            for (const existingLabel of existing) {
+              if (!desiredNames.has(existingLabel.name) && !protectedLabels.has(existingLabel.name)) {
+                try {
+                  await github.rest.issues.deleteLabel({ owner, repo, name: existingLabel.name });
+                  core && core.info && core.info(`Deleted label: ${existingLabel.name}`);
+                } catch (err) {
+                  core && core.info && core.info(`Failed deleting ${existingLabel.name}: ${err.message}`);
+                }
+              }
+            }
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
