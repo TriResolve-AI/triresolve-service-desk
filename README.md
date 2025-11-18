@@ -1,7 +1,7 @@
 
 # 🚀 TriResolve AI – Multi-Agent Service Desk Orchestrator
 
-Created by **Portia Jefferson — aka Portia Mariee (Cyb3rBombsh3ll)**  
+Created by **Portia Jefferson**  
 AI-Augmented Hackathon Project • 2025
 
 ---
@@ -167,51 +167,35 @@ TriResolve AI demonstrates:
 
 ---
 
-## 🫂 Team TriResolve AI
+## 👥 Team TriResolve AI
 
-A globally distributed, AI-powered hackathon team collaborating across three countries.
+A globally distributed engineering team collaborating from the United States, Peru, and the United Kingdom.
 
-┌─────────────────────────────────────────┐
-│          🌍  TEAM TRIRESOLVE AI         │
-│    Innovators • Engineers • Builders     │
-└─────────────────────────────────────────┘
-
-👑 Portia Jefferson — aka Portia Mariee (Cyb3rBombsh3ll)
-
-🇺🇸 United States  
-Role: Lead Architect • AI Systems Designer • Backend Integrations  
-🧠 Specialty: Multi-agent reasoning, runbooks, system orchestration  
+🇺🇸 Portia Jefferson  
+Role: Lead Architect & AI Systems Designer  
 GitHub: https://github.com/portiajefferson  
-LinkedIn: https://www.linkedin.com/in/portiajefferson
+LinkedIn: https://www.linkedin.com/in/portiajefferson/
 
-🧩 Esthefany Humpire Vargas
-
-🇵🇪 Peru  
-Role: Machine Learning Engineer • Classifier + Dataset Integration  
-🧠 Specialty: Dataset structuring, ML modeling, signal mapping  
+🇵🇪 Esthefany Humpire Vargas  
+Role: Backend Developer & Data Engineer  
 GitHub: https://github.com/steffahv  
 LinkedIn: https://www.linkedin.com/in/ehuvarg/
 
-🔧 Nithya Kumar
-
-🇬🇧 United Kingdom  
-Role: Agent Logic Specialist • Runbook + SOP Mapping  
-🧠 Specialty: Agent reasoning flows, deterministic logic, workflows  
+🇬🇧 Nithya Kumar  
+Role: Machine Learning Engineer  
 GitHub: https://github.com/Nithyananthisenthilkumar  
-LinkedIn: https://www.linkedin.com/in/nithyananthi-senthilkumar
+LinkedIn: https://www.linkedin.com/in/nithyananthi-senthilkumar/
 
-🌟 Megan Nepshinsky
-
-🇺🇸 United States  
-Role: Contributor • UX & Workflow Reviewer  
-🧠 Specialty: Logic clarity, QA flow, user experience analysis  
+🇺🇸 Megan Nepshinsky  
+Role: Contributor • UX & Logic Reviewer  
 GitHub: https://github.com/megan-nepshinsky  
 LinkedIn: https://www.linkedin.com/in/megan-marie-janish/
 
 ---
 
-## 💜 About the Creator  
-Built by **Portia Jefferson**  
-Cybersecurity • AI • Automation • Creative Intelligence  
+## 💙 About the Creator
+
+Built by Portia Jefferson  
+Cybersecurity • AI • Automation • Creative Intelligence
 
 ---
