@@ -1,0 +1,18 @@
+# Labeler configuration: map file path globs to label names
+# See: https://github.com/actions/labeler
+"docs/**":
+  - documentation
+"frontend/**":
+  - frontend
+"backend/**":
+  - backend
+"runbooks/**":
+  - runbook
+"*.md":
+  - documentation
+"*.yml":
+  - hackathon
+"Dockerfile":
+  - backend
+"/.github/**":
+  - documentation
