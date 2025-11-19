@@ -25,6 +25,8 @@ System diagrams, components, how each module integrates.
 
 Details on the IT, HR, and Finance agents, and TriNexa’s decision framework.
 
+**See also:** [Project Workflow](Project-Workflow.md) · [Demo & Presentations](Demo.md) · [Architecture Overview](Architecture.md)
+
 ### 3. [API Reference](API.md)
 
 Endpoints, response formats, authentication methods.
