@@ -2,6 +2,12 @@
 
 TriResolve AI follows a transparent, team-based workflow.
 
+## Contents
+
+- [Project Board States](#-project-board-states)
+- [Contributor Workflow](#-contributor-workflow)
+- [Labels](#-labels)
+
 ---
 
 ## 📊 Project Board States

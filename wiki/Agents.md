@@ -2,6 +2,12 @@
 
 TriResolve AI uses a hybrid multi-agent system coordinated by TriNexa.
 
+## Contents
+
+- [Agent Types](#-agent-types)
+- [Classifier (Model 1)](#-classifier-model-1)
+- [Agent-to-Agent Collaboration (Model 2)](#-agent-to-agent-collaboration-model-2)
+
 ---
 
 ## 🧠 Agent Types

@@ -6,6 +6,16 @@ Powered by TriNexa
 Welcome to the official documentation hub for the TriResolve AI project.
 This Wiki provides high-level overviews, technical breakdowns, team processes, and integration details.
 
+## Contents
+
+- [Architecture Overview](Architecture.md)
+- [Agents & Reasoning](Agents.md)
+- [API Reference](API.md)
+- [Data & ML Models](Data-ML.md)
+- [Project Workflow](Project-Workflow.md)
+- [Team Guide](Team-Guide.md)
+- [Demo + Presentations](Demo.md)
+
 ---
 
 ## 📌 What is TriResolve AI?

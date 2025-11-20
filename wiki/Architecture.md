@@ -2,6 +2,12 @@
 
 TriResolve AI is built using a layered, modular, agent-driven architecture.
 
+## Contents
+
+- [High-Level Architecture](#-high-level-architecture)
+- [Core Components](#-core-components)
+- [Planned Enhancements](#-planned-architecture-enhancements)
+
 ---
 
 ## 🔹 High-Level Architecture

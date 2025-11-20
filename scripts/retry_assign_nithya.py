@@ -40,6 +40,11 @@ def is_collaborator(username: str) -> bool:
         return True
     if resp.status_code == 404:
         return False
+    # Some tokens / workflows may not have permission to query collaborator status
+    # (which can return non-204/404 codes). In that case, return None to indicate
+    # unknown and allow the caller to attempt assignment directly.
+    if resp.status_code in (401, 403):
+        return None
     resp.raise_for_status()
     return False
 
@@ -64,13 +69,8 @@ def remove_label(issue: int, label: str) -> None:
 def assign_issue(issue: int, assignees: List[str]) -> None:
     url = f"{API_URL}/repos/{REPO}/issues/{issue}/assignees"
     resp = requests.post(url, json={"assignees": assignees}, headers=api_headers())
-    # If the assignee invite isn't accepted yet, API may return 422 — raise for others
-    if resp.status_code == 201 or resp.status_code == 200:
-        return
-    if resp.status_code == 422:
-        # validation error (likely not a collaborator yet)
-        raise RuntimeError(f"Cannot assign #{issue}: {resp.status_code} {resp.text}")
-    resp.raise_for_status()
+    # Return the response for caller to inspect; caller will handle 422 vs success.
+    return resp
 
 
 def post_comment(issue: int, body: str) -> None:
@@ -84,34 +84,44 @@ def main():
         print("GITHUB_TOKEN is required in environment.")
         sys.exit(1)
 
-    print(f"Checking whether {USERNAME} is a collaborator...")
+    print(f"Checking whether {USERNAME} is a collaborator (best-effort)...")
     try:
         collab = is_collaborator(USERNAME)
     except Exception as e:
         print("Failed to check collaborator status:", e)
-        sys.exit(1)
+        collab = None
 
-    if not collab:
-        print(f"{USERNAME} is not a collaborator yet. Exiting; will retry later.")
-        sys.exit(2)
-
-    print(f"{USERNAME} is a repository collaborator — assigning issues...")
+    if collab is True:
+        print(f"{USERNAME} is a repository collaborator — attempting assignment...")
+    elif collab is False:
+        print(f"{USERNAME} is not a collaborator according to the API; attempting assignment anyway (will report errors).")
+    else:
+        print(f"Collaborator status unknown (permissions may be limited). Attempting assignment and checking API responses...")
 
     for issue in ISSUES:
         try:
-            assign_issue(issue, [USERNAME])
-            # tidy labels
-            try:
-                remove_label(issue, "status: needs triage")
-            except Exception:
-                pass
-            try:
-                remove_label(issue, "owner: nithya")
-            except Exception:
-                pass
-            add_labels(issue, ["status: backlog", "type: Task"])
-            post_comment(issue, f"Assigned to @{USERNAME} after collaborator invite accepted; moving to Backlog.")
-            print(f"Assigned and updated labels for #{issue}")
+            resp = assign_issue(issue, [USERNAME])
+            if resp is None:
+                print(f"No response returned when assigning #{issue}")
+                continue
+            if resp.status_code in (200, 201):
+                # success — tidy labels
+                try:
+                    remove_label(issue, "status: needs triage")
+                except Exception:
+                    pass
+                try:
+                    remove_label(issue, "owner: nithya")
+                except Exception:
+                    pass
+                add_labels(issue, ["status: backlog", "type: Task"])
+                post_comment(issue, f"Assigned to @{USERNAME} after collaborator invite accepted; moving to Backlog.")
+                print(f"Assigned and updated labels for #{issue}")
+            elif resp.status_code == 422:
+                # validation error (likely not a collaborator yet)
+                print(f"API returned 422 for #{issue} — likely validation error: {resp.text}")
+            else:
+                print(f"Unexpected response assigning #{issue}: {resp.status_code} {resp.text}")
         except Exception as e:
             print(f"Failed to assign/update #{issue}: {e}")
 
