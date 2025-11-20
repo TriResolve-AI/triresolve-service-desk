@@ -26,4 +26,7 @@ jobs:
       - name: Run retry script
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python3 scripts/retry_assign_nithya.py
+          TRIRESOLVE_PAT: ${{ secrets.TRIRESOLVE_PAT }}
+        run: |
+          # If TRIRESOLVE_PAT is provided as a secret it will be preferred by the script.
+          python3 scripts/retry_assign_nithya.py

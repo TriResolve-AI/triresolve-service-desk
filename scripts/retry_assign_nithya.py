@@ -21,7 +21,7 @@ REPO = "TriResolve-AI/triresolve-service-desk"
 USERNAME = "Nithyananthisenthilkumar"
 ISSUES = [37, 38]
 
-TOKEN = os.environ.get("GITHUB_TOKEN") or os.environ.get("TRIRESOLVE_AUTOMATION_CS_TOKEN")
+TOKEN = os.environ.get("TRIRESOLVE_PAT") or os.environ.get("GITHUB_TOKEN") or os.environ.get("TRIRESOLVE_AUTOMATION_CS_TOKEN")
 API_URL = "https://api.github.com"
 
 
@@ -81,7 +81,7 @@ def post_comment(issue: int, body: str) -> None:
 
 def main():
     if not TOKEN:
-        print("GITHUB_TOKEN is required in environment.")
+        print("No token found in environment. Set `TRIRESOLVE_PAT` or `GITHUB_TOKEN`.")
         sys.exit(1)
 
     print(f"Checking whether {USERNAME} is a collaborator (best-effort)...")
