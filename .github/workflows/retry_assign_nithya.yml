@@ -27,6 +27,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TRIRESOLVE_PAT: ${{ secrets.TRIRESOLVE_PAT }}
+          TRIRESOLVE_AUTOMATION_CS_TOKEN: ${{ secrets.TRIRESOLVE_AUTOMATION_CS_TOKEN }}
         run: |
           # If TRIRESOLVE_PAT is provided as a secret it will be preferred by the script.
           python3 scripts/retry_assign_nithya.py
