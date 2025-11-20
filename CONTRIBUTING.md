@@ -107,7 +107,7 @@ Include:
 
 ### 5. Request Review  
 Tag your team lead:
-- Core Eng: `@portiajefferson`
+- Core Eng: `@portia`
 - AI/ML: `@nithya`
 - UX/UI: `@megan`
 - Docs: `@estefany`
