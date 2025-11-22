@@ -23,6 +23,7 @@ from typing import Dict, List, Any
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 OWNER = "TriResolve-AI"
 REPO = "triresolve-service-desk"
+API_TIMEOUT = 30  # seconds
 
 if not GITHUB_TOKEN:
     raise SystemExit("❌ Please set GITHUB_TOKEN environment variable.")
@@ -76,7 +77,7 @@ def create_milestone(milestone: Dict[str, Any]) -> None:
         "state": milestone.get("state", "open"),
     }
     
-    resp = requests.post(API_URL, json=payload, headers=HEADERS)
+    resp = requests.post(API_URL, json=payload, headers=HEADERS, timeout=API_TIMEOUT)
     
     if resp.status_code == 201:
         data = resp.json()
@@ -112,7 +113,7 @@ def create_milestone(milestone: Dict[str, Any]) -> None:
 def list_existing_milestones() -> List[str]:
     """Fetch existing milestone titles from the repository."""
     try:
-        resp = requests.get(API_URL, headers=HEADERS, params={"state": "all"})
+        resp = requests.get(API_URL, headers=HEADERS, params={"state": "all"}, timeout=API_TIMEOUT)
         if resp.status_code == 200:
             milestones = resp.json()
             return [m["title"] for m in milestones]

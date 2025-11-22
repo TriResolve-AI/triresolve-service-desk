@@ -23,6 +23,7 @@ import requests
 
 GRAPHQL_URL = "https://api.github.com/graphql"
 TOKEN = os.environ.get("GITHUB_TOKEN")
+API_TIMEOUT = 30  # seconds
 
 
 def gql(query, variables=None):
@@ -35,7 +36,7 @@ def gql(query, variables=None):
     if variables:
         payload["variables"] = variables
     
-    resp = requests.post(GRAPHQL_URL, json=payload, headers=headers)
+    resp = requests.post(GRAPHQL_URL, json=payload, headers=headers, timeout=API_TIMEOUT)
     resp.raise_for_status()
     data = resp.json()
     
