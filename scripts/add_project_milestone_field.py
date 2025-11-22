@@ -85,8 +85,9 @@ def create_milestone_field(project_id, milestone_options):
     """
     Create a single-select Milestone field in the project.
     
-    Note: As of now, the GitHub GraphQL API does not support creating
-    custom fields programmatically. This must be done through the GitHub UI.
+    Note: At the time of writing (November 2025), the GitHub GraphQL API does 
+    not support creating custom fields programmatically. This must be done 
+    through the GitHub UI.
     
     This function serves as a placeholder/documentation for the manual steps.
     """

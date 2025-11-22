@@ -88,7 +88,9 @@ def create_milestone(milestone: Dict[str, Any]) -> None:
         try:
             data = resp.json()
             errors = data.get("errors", [])
-            # Check if any error indicates the milestone already exists
+            # Note: GitHub API error structure varies; we use string matching as a fallback.
+            # Ideally would check error.code or error.field, but the API doesn't provide
+            # a consistent structure for milestone duplicate detection.
             already_exists = any(
                 "already_exists" in str(e).lower() or 
                 "already exists" in str(e).lower()
