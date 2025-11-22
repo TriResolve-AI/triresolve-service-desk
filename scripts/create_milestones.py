@@ -83,11 +83,23 @@ def create_milestone(milestone: Dict[str, Any]) -> None:
         print(f"✅ Created milestone: {data['title']} (#{data['number']})")
         print(f"   URL: {data['html_url']}")
     elif resp.status_code == 422:
-        # Milestone might already exist
-        data = resp.json()
-        if "already_exists" in str(data.get("errors", [])):
-            print(f"⚠️  Milestone already exists: {milestone['title']}")
-        else:
+        # Milestone might already exist or validation error occurred
+        try:
+            data = resp.json()
+            errors = data.get("errors", [])
+            # Check if any error indicates the milestone already exists
+            already_exists = any(
+                "already_exists" in str(e).lower() or 
+                "already exists" in str(e).lower()
+                for e in errors
+            )
+            if already_exists:
+                print(f"⚠️  Milestone already exists: {milestone['title']}")
+            else:
+                print(f"❌ Failed to create milestone: {milestone['title']}")
+                print(f"   Status: {resp.status_code}")
+                print(f"   Errors: {errors}")
+        except Exception as e:
             print(f"❌ Failed to create milestone: {milestone['title']}")
             print(f"   Status: {resp.status_code}")
             print(f"   Response: {resp.text}")
@@ -99,11 +111,17 @@ def create_milestone(milestone: Dict[str, Any]) -> None:
 
 def list_existing_milestones() -> List[str]:
     """Fetch existing milestone titles from the repository."""
-    resp = requests.get(API_URL, headers=HEADERS, params={"state": "all"})
-    if resp.status_code == 200:
-        milestones = resp.json()
-        return [m["title"] for m in milestones]
-    return []
+    try:
+        resp = requests.get(API_URL, headers=HEADERS, params={"state": "all"})
+        if resp.status_code == 200:
+            milestones = resp.json()
+            return [m["title"] for m in milestones]
+        else:
+            print(f"⚠️  Warning: Failed to fetch existing milestones (status {resp.status_code})")
+            return []
+    except Exception as e:
+        print(f"⚠️  Warning: Error fetching existing milestones: {e}")
+        return []
 
 
 def main():
