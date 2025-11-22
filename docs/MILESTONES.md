@@ -72,6 +72,8 @@ This document outlines the key milestones for the TriResolve AI project.
 
 ## Creating Milestones in GitHub
 
+### Repository Milestones
+
 To create these milestones in the GitHub repository, run:
 
 ```bash
@@ -80,6 +82,17 @@ python3 scripts/create_milestones.py
 ```
 
 This will create all six milestones via the GitHub API. Once created, you can assign issues to these milestones through the GitHub UI or API.
+
+### Project Milestone Field
+
+To add a "Milestone" field to your GitHub Project V2 with these options, you can use the helper script to check existing configuration:
+
+```bash
+export GITHUB_TOKEN="your_github_token"
+python3 scripts/add_project_milestone_field.py --org TriResolve-AI --project-number 2
+```
+
+**Note:** GitHub's API does not currently support creating custom fields programmatically. The script will guide you through creating the field manually via the GitHub UI if it doesn't exist yet.
 
 ---
 
