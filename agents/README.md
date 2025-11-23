@@ -134,15 +134,4 @@ All agents use a shared scaffold:
 
 ---
 
-# ✔ This fixes your formatting issue
-
-### Why your previous version broke:
-- Markdown *requires a blank line before & after code blocks*
-- Headings require a blank line before the next section
-- GitHub collapses sections if lines run together
-- Indented diagrams can accidentally “eat” all following text
-
-This corrected version won’t collapse any sections.
-
----
 
