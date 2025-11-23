@@ -165,6 +165,18 @@ TriResolve AI demonstrates:
 - Reproducible ticket resolution demos  
 - Clear explainability for judges  
 
+### 📍 Project Milestones
+
+The project follows six key milestones:
+- **M1** – Foundations Ready
+- **M2** – Backend Routing + Agents
+- **M3** – Classifier + API
+- **M4** – Demo UX & Storyboard
+- **M5** – Full System Demo
+- **M6** – Final Submission
+
+See [docs/MILESTONES.md](docs/MILESTONES.md) for detailed milestone descriptions.
+
 ---
 
 ## 👥 Team TriResolve AI
