@@ -1,0 +1,64 @@
+finance_policies:
+  payroll:
+    pay_cycle: "Bi-weekly"
+    cutoff: "Tuesday 12:00 PM"
+    allowable_adjustments:
+      - "Missed hours"
+      - "Retro pay"
+      - "Shift differentials"
+      - "Bonus/spot award (VP approval)"
+    restrictions:
+      no_manual_bank_changes: true
+      same_day_changes_limited: true
+
+  reimbursements:
+    submission_window_days: 30
+    required_docs:
+      - "Receipt"
+      - "Business justification"
+    manager_approval_required: true
+    payout_timing: "Next payroll cycle"
+    allowed_categories:
+      travel:
+        flights: true
+        hotel: true
+        mileage_rate_federal: true
+      meals:
+        itemized_receipt_required: true
+        alcohol_reimbursed: false
+      office_supplies: true
+
+  per_diem:
+    applies_domestic_only: true
+    follows_gsa_rates: true
+    receipts_required_for_meals: false
+
+  invoicing:
+    submission_email: "ap@triresolve.com"
+    required_fields:
+      - "PO Number"
+      - "Invoice Number"
+      - "Description"
+      - "Payment Terms"
+    approval_thresholds:
+      under_5000: "Manager"
+      between_5k_25k: "Director"
+      above_25k: "CFO"
+  
+  payments:
+    default_terms: "Net 30"
+    rush_payment_requires_cfo_approval: true
+
+  budgeting:
+    quarterly_review_required: true
+    variance_analysis_required: true
+
+  sensitive_data_controls:
+    allow_confirming_process_not_details: true
+    no_account_numbers_allowed: true
+    no_routing_numbers_allowed: true
+    escalation:
+      payroll_issues: "Payroll Specialist"
+      budget_issues: "Finance Partner"
+      vendor_disputes: "Accounts Payable"
+      fraud: "Internal Audit"

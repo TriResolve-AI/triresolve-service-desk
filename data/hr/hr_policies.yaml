@@ -1,0 +1,82 @@
+hr_policies:
+  employment_classification:
+    full_time_exempt:
+      definition: "Salaried employees not eligible for overtime."
+    full_time_non_exempt:
+      definition: "Hourly employees eligible for overtime."
+    part_time:
+      definition: "Employees working less than 30 hours per week."
+    temporary:
+      definition: "Short-term or project-based workers not eligible for benefits."
+
+  work_hours:
+    standard_week: 40
+    core_hours: "10:00–15:00"
+    remote_work: 
+      allowed_days_per_week: 3
+      notes: "Remote eligibility varies by function."
+
+  compensation:
+    pay_schedule: "Bi-weekly, every other Friday."
+    overtime:
+      rate: "1.5x"
+      threshold_hours: 40
+      approval_required: true
+
+  benefits:
+    medical:
+      eligibility: "Starts on Day 1 of full-time employment."
+      dependent_window_days: 30
+    dental:
+      eligibility: "Starts after 30 days."
+      premium_share_employee: "20%"
+    vision:
+      included: true
+    retirement_401k:
+      match:
+        starts_after_months: 6
+        match_rate: "50% of up to 6%"
+
+  pto:
+    annual_days: 15
+    accrual_rate_monthly: 1.25
+    carryover:
+      max_days: 5
+      expiration: "March 31"
+    blackout_periods:
+      - "Last week of December"
+      - "Last week of fiscal quarter"
+    request_notice_days: 3
+
+  sick_leave:
+    annual_days: 7
+    doctor_note_required_after_days: 3
+
+  parental_leave:
+    total_weeks: 12
+    paid_weeks: 8
+    unpaid_weeks: 4
+    notice_days: 30
+
+  bereavement:
+    paid_days: 5
+
+  onboarding:
+    orientation_deadline_days: 3
+    i9_deadline_hours: 72
+    required_forms:
+      - "W-4"
+      - "Direct Deposit"
+      - "Emergency Contact"
+    equipment_provided_within_days: 5
+    trainings:
+      due_within_days: 30
+      modules:
+        - "Security & Privacy"
+        - "Code of Conduct"
+        - "Anti-Harassment"
+
+  offboarding:
+    exit_interview: true
+    equipment_return_required: true
+    final_paycheck: "Next regular pay cycle"
