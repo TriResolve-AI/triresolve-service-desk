@@ -1,15 +1,9 @@
-from fastapi import FastAPI
-from backend.api.routes import router as api_router
+"""
+Thin wrapper so you can run:
 
-app = FastAPI(
-	title="TriResolve AI - Multi-Agent Service Desk",
-	description="Auto-resolving IT, HR, and Finance tickets with AI agents & runbooks.",
-	version="0.1.0"
-)
+    uvicorn backend.main:app --reload
 
-app.include_router(api_router)
+and still keep the real FastAPI app in backend/api/main.py
+"""
 
-@app.get("/")
-def root():
-	return {"message": "TriResolve AI backend is running"}
-
+from backend.api.main import app  # noqa: F401
