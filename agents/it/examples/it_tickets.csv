@@ -1,0 +1,9 @@
+title ,description ,category 
+"""VPN access""","""I am trying to keep my web browsing secure while I am away from the office. Can you please help me access a VPN I can use on my device?""",it
+"""MFA issues""","""I recently got a new phone and a new phone number. I am not able to access my previous number for MFA. Can you please help me update it?""",it
+"""Password reset""","""I forgot my password. Can you please reset it?""",it
+"""Laptop malfunction""","""My laptop is not turning on. Can you please take a look at what is wrong with it?""",it
+"""Outlook/Teams access""","""I recently got a new account and I need help accessing Outlook/Teams for virtual meetings.""",it
+"""Software install request""","""I would like to install Adobe Photoshop on my device. Can you please help me?""",it
+"""Account locked out""","""I tried to enter my password too many times into my account and I am now locked out. Can you please help?""",it
+"""Network outage reports""","""Hello! I am in office 304 on the 3rd floor of the Alexandria office. I do not have access to the network despite trying to restart my computer. Can you please assist?""",it
