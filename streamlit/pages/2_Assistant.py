@@ -59,7 +59,6 @@ st.markdown(
 page_header(
     "Need help?",
     "Select which agent best suits your needs, or just start typing below.",
-    logo_path="TriResolve_logo.jpg",  # adjust path if needed
 )
 
 st.markdown("")  # a little spacing
