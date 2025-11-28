@@ -1,32 +1,46 @@
-id: triresolve-orchestrator-agent
-display_name: TriResolve Orchestrator Agent
+# AI Foundry Agent Definition – Orchestrator (TriNexa)
+
+name: triresolve-orchestrator
 description: >
-  Coordinates classifier and domain agents and returns one unified response.
+  The TriNexa Orchestrator Agent coordinates across all TriResolve domain
+  agents (IT, HR, Finance, Security, Ops, Architect) to produce a final,
+  unified response for each incoming ticket.
 
-model:
-  deployment_env_var: AZURE_OPENAI_DEPLOYMENT_ORCHESTRATOR
-  temperature: 0.4
-  max_output_tokens: 2048
+model: gpt-4o
 
-instructions:
-  file: agent.md
+instructions: |
+  You are the TriResolve Orchestrator Agent (TriNexa).
+  Your job is to:
+  - Receive a ticket and metadata.
+  - Consult the Classifier agent first.
+  - Based on classification, decide which domain agents to call.
+  - Aggregate and reconcile their outputs.
+  - Produce ONE final user-ready response.
 
-capabilities:
-  - multi_agent_routing
-  - aggregation
-  - decision_making
+  Always output:
+  {
+    "final_answer": "...",
+    "agents_consulted": [],
+    "actions_taken": "",
+    "next_steps": "",
+    "risk_escalation": ""
+  }
 
-upstream_agents:
-  - classifier
-  - hr
-  - it
-  - finance
-  - architect
-  - security
-  - ops
+  Rules:
+  - Do NOT directly use tools. Rely on domain agents for tool-calling.
+  - If agents disagree, choose the safest / least risky interpretation.
+  - Keep internal complexity hidden unless user asks for an audit.
+  - Always maintain Responsible AI standards (safe, non-harmful output).
 
-tags:
-  - agent
-  - orchestrator
-  - coordinator
-  - triresolve
+top_p: 1.0
+temperature: 0.5
+tools: []
+tool_resources: {}
+events: []
+inputs:
+  - name: ticket
+    type: string
+outputs:
+  - name: final_answer
+    type: string
+response_format: json
