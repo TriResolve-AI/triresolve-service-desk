@@ -1,137 +1,129 @@
 # 🧠 TriResolve AI — Agent Architecture
 
-This folder contains all agent logic, prompts, runbooks, and documentation that power **TriNexa**, the global orchestrator for the TriResolve AI multi-agent service desk.
+This folder contains all agent logic, prompts, runbooks, examples, and documentation that power **TriResolve AI** and **TriNexa**, the global multi-agent orchestrator for the service desk.
+
+Agents are created and managed in **Azure AI Foundry** and invoked from the backend via **Azure OpenAI**.
 
 ---
 
-## 🏗 Agent Architecture Diagram
+## 🏗 Agent Topology
 
-Below is the conceptual topology showing how agents interact:
+High-level view of how everything fits together:
 
-                         ┌────────────────────┐
-                         │     TriNexa        │
-                         │ (Global Router)    │
-                         └─────────┬──────────┘
-                                   │
-            ┌──────────────────────┼──────────────────────┐
-            │                      │                      │
-    ┌───────▼───────┐      ┌───────▼───────┐      ┌───────▼───────┐
-    │      IT       │      │      HR       │      │    Finance    │
-    │   Agent       │      │    Agent      │      │     Agent      │
-    └──────┬────────┘      └──────┬────────┘      └──────┬────────┘
-           │                      │                      │
-           ▼                      ▼                      ▼
-    Runbooks/Tools         Policies/Workflows     Approvals/Systems
+                         ┌───────────────────────────┐
+                         │        TriNexa            │
+                         │  (Global Orchestrator)    │
+                         └────────────┬──────────────┘
+                                      │
+             ┌────────────────────────┼────────────────────────┐
+             │                        │                        │
+      ┌──────▼───────┐        ┌───────▼───────┐        ┌───────▼───────┐
+      │ Classifier   │        │  Architect    │        │   Security    │
+      │  Agent       │        │   Agent       │        │    Agent      │
+      └──────┬───────┘        └──────┬───────┘        └──────┬────────┘
+             │                        │                        │
+             ▼                        ▼                        ▼
+      Ticket domain &         System / solution         Risk, policy &
+      intent routing          design & planning         compliance review
+
+             ┌────────────────────────┼────────────────────────┐
+             │                        │                        │
+      ┌──────▼───────┐        ┌───────▼───────┐        ┌───────▼───────┐
+      │     IT       │        │      HR       │        │    Finance    │
+      │    Agent     │        │    Agent      │        │     Agent     │
+      └──────┬───────┘        └──────┬───────┘        └──────┬────────┘
+             │                        │                        │
+             ▼                        ▼                        ▼
+   IT tickets & tools        People / policy / HR       Payments, vendors,
+                             workflows                  budgets, approvals
+
+                          ┌──────────────────────┐
+                          │        Ops           │
+                          │       Agent          │
+                          └─────────┬────────────┘
+                                    ▼
+                          Incidents, SLO/SLA,
+                          logs, reliability
 
 ---
 
-## 🔗 How the Agents Fit Together
+## 🔗 End-to-End Flow
 
-Each incoming ticket flows through the following pipeline:
+1. **Ticket Intake**  
+   A ticket is submitted via the TriResolve UI or API and sent to the backend.
 
-1. **Intake Endpoint**  
-   User submits a ticket via TriResolve UI.
+2. **Classification**  
+   The backend calls the **Classifier Agent**, which predicts:
+   - Domain: `IT`, `HR`, `Finance`, `Security`, `Ops`, or `Architect`
+   - Priority and intent (where supported)
 
-2. **Classifier Model (Model 1)**  
-   Predicts the domain: `IT`, `HR`, or `Finance`.
+3. **Orchestration via TriNexa**  
+   The **TriNexa Orchestrator Agent**:
+   - Reads the classification and ticket details  
+   - Decides which agents to call (one or many)  
+   - Aggregates and reconciles their responses  
 
-3. **TriNexa (Global Router)**  
-   - Reads the predicted domain  
-   - Maps to the correct agent  
-   - Sends context + ticket metadata
+4. **Domain Agent Execution**  
+   Each domain agent:
+   - Applies its persona + policies  
+   - May use tools/knowledge bases (runbooks, docs, KBs)  
+   - Returns a structured result (JSON-like fields: summary, steps, risk, etc.)
 
-4. **Domain Agent Executes**  
-   - Loads the correct runbook  
-   - Performs multi-step reasoning  
-   - Returns structured output JSON
-
-5. **TriNexa Combines Outputs**  
-   - Adds meta-reasoning  
-   - Format final response  
-   - Sends result back to the user
+5. **Final Answer**  
+   TriNexa returns a **single, user-friendly response** back to the backend, which is sent to the UI.
 
 ---
 
 ## 📁 Folder Structure
 
-The `/agents` folder is organized by domain:
+The `/agents` folder is organized by agent domain, with a consistent pattern:
 
+```text
 agents/
+├── docs/
+│   ├── agents-architecture.md
+│   ├── classifier.md
+│   └── orchestration-model.md
+│
+├── classifier/
+│   ├── agent.py
+│   ├── agent.md        # Foundry instructions / persona
+│   └── examples/
+│
+├── orchestrator/
+│   ├── agent.py
+│   ├── agent.md
+│   └── runbooks/
+│
 ├── it/
-│ ├── it-agent.md
-│ ├── runbooks/
-│ ├── examples/
-│ └── agent.py
+│   ├── agent.py
+│   ├── agent.md
+│   ├── runbooks/
+│   └── examples/
 │
 ├── hr/
-│ ├── hr-agent.md
-│ ├── runbooks/
-│ ├── examples/
-│ └── agent.py
+│   ├── agent.py
+│   ├── agent.md
+│   ├── runbooks/
+│   └── examples/
 │
 ├── finance/
-│ ├── finance-agent.md
-│ ├── runbooks/
-│ ├── examples/
-│ └── agent.py
+│   ├── agent.py
+│   ├── agent.md
+│   ├── runbooks/
+│   └── examples/
 │
-└── docs/
-├── classifier.md
-├── architecture-diagram.md
-└── reasoning-models.md
-
-
----
-
-## 🧩 Agent Responsibilities
-
-### **IT Agent**
-- Hardware/software troubleshooting  
-- Reset + access workflows  
-- Device/network diagnostics  
-- Software installs  
-- MFA, password resets  
-
-### **HR Agent**
-- PTO, leave, benefits  
-- Hiring & onboarding steps  
-- Verification workflows  
-- HR compliance  
-
-### **Finance Agent**
-- Payroll, reimbursements  
-- Invoice approvals  
-- Expense verification  
-- Vendor workflows  
-
----
-
-## 🧪 Testing the Agents
-
-Use the `/scripts/run-agent.py` tool to simulate:
-
-python scripts/run-agent.py --agent it --ticket "Reset my laptop password"
-
----
-
-## 🧵 Reasoning Framework
-
-All agents use a shared scaffold:
-
-1. Extract intent  
-2. Select runbook  
-3. Execute step-by-step  
-4. Produce structured JSON  
-5. Return trace + explanation  
-
----
-
-## 📚 Additional Docs
-
-- `/agents/docs/classifier.md`  
-- `/agents/docs/reasoning-models.md`  
-- `/agents/docs/architecture-diagram.md`  
-
----
-
-
+├── architect/
+│   ├── agent.py
+│   ├── agent.md
+│   └── examples/
+│
+├── security/
+│   ├── agent.py
+│   ├── agent.md
+│   └── runbooks/
+│
+└── ops/
+    ├── agent.py
+    ├── agent.md
+    └── runbooks/
