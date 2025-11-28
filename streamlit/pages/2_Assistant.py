@@ -32,9 +32,8 @@ if "selected_domain" not in st.session_state:
 
 
 def agent_button(label: str, domain: str, key: str) -> None:
-    """Render a department selection button with custom styling."""
+    """Render a department selection button."""
     is_selected = st.session_state.selected_domain == domain
-    
     # Use st.button for functionality with CSS-based styling
     if st.button(label, key=key, use_container_width=True, type="secondary" if not is_selected else "primary"):
         st.session_state.selected_domain = domain
