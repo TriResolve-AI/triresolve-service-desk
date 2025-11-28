@@ -1,3 +1,5 @@
+# backend/api/services/azure_client.py
+
 from openai import AzureOpenAI
 
 from backend.config import get_settings
@@ -12,7 +14,14 @@ client = AzureOpenAI(
 )
 
 
-def chat_completion(system_prompt: str, user_prompt: str, model: str | None = None) -> str:
+def chat_completion(
+    system_prompt: str,
+    user_prompt: str,
+    model: str | None = None,
+    *,
+    temperature: float = 0.2,
+    max_tokens: int | None = None,
+) -> str:
     """
     Helper that wraps Azure OpenAI chat completions.
 
@@ -26,7 +35,8 @@ def chat_completion(system_prompt: str, user_prompt: str, model: str | None = No
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
-        temperature=0.2,
+        temperature=temperature,
+        max_tokens=max_tokens,
     )
 
-    return response.choices[0].message.content
+    return response.choices[0].message.content or ""
