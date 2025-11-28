@@ -6,7 +6,7 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
-from theme import PALETTE, DEPT_COLORS, inject_base_css
+from theme import inject_base_css
 
 # Shared styles
 inject_base_css()
