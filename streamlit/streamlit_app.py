@@ -1,136 +1,113 @@
 # streamlit/streamlit_app.py
 
-import requests
+from pathlib import Path
+
 import streamlit as st
 
-from config import settings  # uses your unified config helper
+from theme import PALETTE, inject_base_css
 
-# --- PAGE CONFIG ---
+# ---- Page config (only here, not in sub-pages) ----
 st.set_page_config(
     page_title="TriResolve AI – Service Desk Platform",
     page_icon="🧠",
     layout="wide",
 )
 
-# --- BASIC THEME TWEAKS VIA CSS ---
+# Inject shared CSS
+inject_base_css()
+
+# ---- Try to load logo ----
+logo_path = Path(__file__).parent / "assets" / "triresolve_logo.png"
+
+col_logo, col_title = st.columns([1, 3])
+
+with col_logo:
+    if logo_path.exists():
+        st.image(str(logo_path), width=110)
+    else:
+        st.markdown(
+            f"<div class='pill'>TriResolveAI<span>Service Desk</span></div>",
+            unsafe_allow_html=True,
+        )
+
+with col_title:
+    st.markdown(
+        """
+        <div class="triresolve-hero">
+            <h1>TriResolve AI – Service Desk Platform</h1>
+            <h3>Powered by <b>TriNexa</b>, your multi-domain orchestrator for IT, HR, and Finance.</h3>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+st.markdown("")
 st.markdown(
-    """
-    <style>
-    .main {
-        padding-top: 2rem;
-        padding-bottom: 2rem;
-    }
-    .triresolve-hero h1 {
-        font-size: 2.4rem !important;
-        margin-bottom: 0.3rem;
-    }
-    .triresolve-hero h3 {
-        font-size: 1.1rem !important;
-        font-weight: 400;
-        opacity: 0.9;
-        margin-top: 0;
-    }
-    .section-label {
-        text-transform: uppercase;
-        letter-spacing: 0.12em;
-        font-size: 0.8rem;
-        color: #8a8d98;
-    }
-    .pill {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.2rem 0.6rem;
-        border-radius: 999px;
-        font-size: 0.7rem;
-        background: rgba(0, 213, 240, 0.12);
-        color: #00d5f0;
-        margin-right: 0.4rem;
-    }
-    .pill span {
-        margin-left: 0.3rem;
-    }
-    .agent-badge {
-        font-size: 0.8rem;
-        padding: 0.2rem 0.5rem;
-        border-radius: 999px;
-        margin-right: 0.3rem;
-        background: rgba(172, 70, 186, 0.12);
-        color: #ac46ba;
-    }
-    </style>
-    """,
+    "<p class='section-label'>Overview</p>",
     unsafe_allow_html=True,
 )
 
-# --- SIDEBAR NAV USING PAGE LINKS ---
-st.sidebar.title("TriResolve AI")
-st.sidebar.write("Service Desk Platform")
+left, right = st.columns([1.7, 1.3])
 
-st.sidebar.markdown("#### Navigation")
-st.sidebar.page_link("streamlit_app.py", label="Overview", icon="🏠")
-st.sidebar.page_link("pages/1_Maps.py", label="Maps", icon="🗺️")
-st.sidebar.page_link("pages/2_Assistant.py", label="Assistant (TriNexa)", icon="🤖")
-st.sidebar.page_link("pages/3_About.py", label="About", icon="ℹ️")
-
-# --- BACKEND HEALTH CHECK ---
-BACKEND_HEALTH_URL = settings.backend_url.rstrip("/") + "/health"
-
-
-def check_backend_health() -> bool:
-    try:
-        resp = requests.get(BACKEND_HEALTH_URL, timeout=3)
-        resp.raise_for_status()
-        data = resp.json()
-        return data.get("status") == "ok"
-    except Exception:
-        return False
-
-
-# --- OVERVIEW CONTENT (MAIN AREA) ---
-st.markdown(
-    """
-    <div class="triresolve-hero">
-        <h1>TriResolve AI – Service Desk Platform</h1>
-        <h3>Powered by TriNexa, your multi-domain orchestrator for IT, HR, and Finance.</h3>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-col1, col2 = st.columns([2, 1])
-
-with col1:
+with left:
     st.write(
         """
-        TriResolve AI is your **multi-agent service desk layer** that will eventually:
+        TriResolve AI is your **multi-agent service desk layer**:
 
-        - Ingest tickets and signals from IT, HR, and Finance systems  
-        - Route them through **TriNexa**, the global orchestrator  
-        - Delegate tasks to specialized agents  
-        - Aggregate resolutions and surface them back in one unified workspace
+        - Ingests tickets and signals from IT, HR, and Finance systems  
+        - Routes them through **TriNexa**, the global orchestrator  
+        - Delegates tasks to specialized agents (IT, HR, Finance, Architect, Security, Ops)  
+        - Aggregates resolutions and surfaces them back in one unified workspace
         """
     )
 
-with col2:
-    st.markdown('<p class="section-label">Status</p>', unsafe_allow_html=True)
+    st.markdown("### Domains")
+    st.markdown(
+        """
+        <span class="agent-badge">IT Service Desk</span>
+        <span class="agent-badge">HR & People Ops</span>
+        <span class="agent-badge">Finance & Spend</span>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    ui_msg = "UI shell: online"
-    st.success(ui_msg)
+with right:
+    st.markdown("### Status")
 
-    if check_backend_health():
-        st.success("Backend API: healthy")
-    else:
-        st.warning("Backend API: not reachable from Streamlit")
+    st.markdown(
+        f"""
+        <div class="tr-card" style="border-left: 4px solid {PALETTE['teal']}">
+            <strong>UI shell</strong><br/>
+            Online in Streamlit, using the TriResolveAI brand system.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    st.info("Agent skills: wired via Azure OpenAI / Foundry deployments")
+    st.markdown("")
+    st.markdown(
+        f"""
+        <div class="tr-card" style="border-left: 4px solid {PALETTE['gold']}">
+            <strong>Backend orchestration</strong><br/>
+            FastAPI + Azure OpenAI orchestrator (TriNexa) wiring in progress.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-st.divider()
-st.markdown('<p class="section-label">Domains</p>', unsafe_allow_html=True)
-st.markdown(
-    """
-    <span class="agent-badge">IT Service Desk</span>
-    <span class="agent-badge">HR & People Ops</span>
-    <span class="agent-badge">Finance & Spend</span>
-    """,
-    unsafe_allow_html=True,
+    st.markdown("")
+    st.markdown(
+        f"""
+        <div class="tr-card" style="border-left: 4px solid {PALETTE['coral']}">
+            <strong>Agents</strong><br/>
+            HR, IT, Finance agents configured in Azure AI Foundry, with space
+            to add Architect, Security, and Ops.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+st.markdown("---")
+st.caption(
+    "Use the sidebar to navigate to **Maps**, **Assistant (TriNexa)**, and **About**."
 )
