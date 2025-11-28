@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 Department = Literal["IT", "HR", "Finance"]
 Priority = Literal["Low", "Medium", "High", "Critical"]
+Domain = Literal["it", "hr", "finance", "security", "architect", "ops"]
 
 
 class TicketCreate(BaseModel):
@@ -56,12 +57,11 @@ class ChatRequest(BaseModel):
 
     message: str = Field(
         ...,
-        min_length=1,
         example="My VPN keeps disconnecting when I work from home.",
     )
-    domain: Optional[str] = Field(
+    domain: Optional[Domain] = Field(
         default=None,
-        description="Optional domain override: 'it', 'hr', 'finance', 'security', 'architect', or 'ops'.",
+        description="Optional domain override.",
     )
 
 
@@ -70,4 +70,4 @@ class ChatResponse(BaseModel):
     Simple chat-style response returned to the Streamlit UI.
     """
 
-    reply: str = Field(..., example="I've reset your VPN credentials. Please try reconnecting.")
+    reply: str
