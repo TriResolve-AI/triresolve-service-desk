@@ -38,3 +38,10 @@ if st.button("Submit Ticket"):
                     if agents_consulted:
                         st.subheader("🧩 Agents Involved")
                         st.write(", ".join(agents_consulted))
+{
+  "response": {
+    "final_answer": "...",
+    "agents_consulted": ["classifier", "it", "security"]
+  }
+}
+
