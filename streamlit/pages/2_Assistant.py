@@ -114,7 +114,7 @@ with col_result:
         else:
             from config import settings  # imported lazily so config can read secrets/env
 
-            backend_url = settings.backend_url.rstrip("/")
+            backend_url = settings._get('backend', 'BACKEND_URL', 'http://localhost:8000').rstrip("/")
             url = f"{backend_url}/tickets/process"
 
             full_description = description
