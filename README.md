@@ -1,213 +1,250 @@
+# 🚀 TriResolve AI – Multi-Agent Service Desk Platform
 
-# 🚀 TriResolve AI – Multi-Agent Service Desk Orchestrator
+A next‑generation, Azure‑powered, **multi‑agent orchestration system** designed to automate IT, HR, Finance, and operational workflows using structured agents, deterministic runbooks, and intelligent routing.
 
-Created by **Portia Jefferson**  
-AI-Augmented Hackathon Project • 2025
-
----
-
-## 🌟 Key Features
-- 🤖 Multi-Agent Intelligence (IT, HR, Finance)
-- ⚡ Automatic ticket classification & routing
-- 📘 Deterministic YAML runbook execution
-- 🧠 Retrieval-augmented reasoning
-- 🐳 Docker-ready FastAPI backend
-- 📊 Transparent logs, decision traces & reproducibility
-- 🧪 Synthetic datasets powering training & testing
+Built collaboratively by the **TriResolve AI Team** for the 2025 AI Engineering Hackathon.
 
 ---
 
-## 🧠 Architecture Overview
+# 🌟 Key Features
+- 🤖 **Multi-Agent Intelligence** across IT, HR, Finance, Ops, Security, and Architecture domains
+- 🧭 **TriNexa Orchestrator** for multi-agent coordination and final answer synthesis
+- 🧠 **Classifier Agent** for ticket domain + intent prediction
+- 📘 **Deterministic YAML Runbooks** for consistent, auditable workflows
+- ⚡ **FastAPI Backend** with Azure OpenAI integration
+- 🔍 **Observability & Logging** for agent calls and orchestration traces
+- 📊 **Streamlit Frontend** for visual demo + interactive UX
+- 🐳 **Docker-ready** for reproducible deployment
+
+---
+
+# 🧠 System Architecture Overview
+The TriResolve AI platform is built using a layered architecture:
 
 ```mermaid
-flowchart LR
-		User([User Submits Ticket]) --> API(FastAPI Backend)
-		API --> Classifier
-		Classifier --> IT[IT Agent]
-		Classifier --> HR[HR Agent]
-		Classifier --> FIN[Finance Agent]
-		IT --> RB[Runbook Engine]
-		HR --> RB
-		FIN --> RB
-		RB --> Resolution([Final Resolution])
-		Resolution --> User
+flowchart TD
+    UI([Streamlit Frontend]) --> API(FastAPI Backend)
+    API --> Classifier>Classifier Agent]
+    API --> Orchestrator>TriNexa Orchestrator]
+
+    Orchestrator --> IT[IT Agent]
+    Orchestrator --> HR[HR Agent]
+    Orchestrator --> FIN[Finance Agent]
+    Orchestrator --> ARCH[Architect Agent]
+    Orchestrator --> SEC[Security Agent]
+    Orchestrator --> OPS[Ops Agent]
+
+    IT --> RB((Runbooks))
+    HR --> RB
+    FIN --> RB
+    OPS --> RB
+
+    Orchestrator --> Final[(Final Response)]
+    Final --> UI
 ```
 
 ---
 
-## 🧩 System Components
+# 🧩 System Components
 
-### 🛰 1. FastAPI Backend
-Central hub for:
-- Ticket intake  
-- Domain classification  
-- Agent routing  
-- Runbook execution  
-- Response formatting  
-
----
-
-### 🧠 2. Agent Layer (Azure AI Multi-Agents)
-
-Each agent features:
-- Domain logic  
-- YAML runbook execution  
-- SOP & policy retrieval  
-- Python tool-calling  
-
-#### IT Agent
-- Password reset  
-- VPN troubleshooting  
-- Device triage  
-- Lockout issues  
-
-#### HR Agent
-- PTO & benefits  
-- Policy lookup  
-- Onboarding support  
-
-#### Finance Agent
-- Payroll adjustments  
-- Reimbursements  
-- Invoice/Budget issues  
+## 🛰 1. **FastAPI Backend**
+Handles:
+- Ticket intake and validation
+- Communication with Azure OpenAI agents
+- TriNexa Orchestrator routing logic
+- Response standardization
 
 ---
 
-### 📜 3. Runbooks (Deterministic Automation)
+## 🧠 2. **Azure AI Foundry Multi-Agent Layer**
+Each agent is defined with:
+- Instructions (persona + rules)
+- Input + Output schemas
+- Optional tools (KB search, runbooks, etc.)
 
-Example:
+### Domain Agents:
+- **IT Agent** – device + access troubleshooting
+- **HR Agent** – onboarding + employee policies
+- **Finance Agent** – invoices, vendor, reimbursements
+- **Security Agent** – risk review + compliance rules
+- **Ops Agent** – SRE-style incident triage
+- **Architect Agent** – system design + solution planning
 
-```yaml
-action: password_reset
-steps:
-	- validate_user_identity
-	- check_AD_lockout_status
-	- reset_password
-	- notify_user: "Your password has been reset."
+### System Agents:
+- **Classifier** – domain + intent prediction
+- **TriNexa Orchestrator** – multi-agent routing + final answer synthesis
+
+---
+
+## 📜 3. Runbooks
+Stored under `/agents/<domain>/runbooks/`.
+
+YAML-based deterministic actions that agents reference to:
+- Structure multi-step processes
+- Maintain auditability
+- Prevent inconsistent behavior
+
+---
+
+## 🎨 4. Streamlit UI
+Intuitive interface for demo and judging:
+- Map page for agent architecture visualization
+- Assistant page for real-time interactions
+- Color‑coded departmental themes
+- Runs locally or via Streamlit Cloud
+
+---
+
+# 🔧 Tools & Technologies
+TriResolve AI is built with:
+
+### **Languages & Frameworks**
+- Python 3.11+
+- FastAPI
+- Streamlit
+
+### **AI & Orchestration**
+- **Azure OpenAI** (multi-agent deployments)
+- **Azure AI Foundry** (agent instructions + schemas)
+- **Azure Cognitive Search** (optional KB integration)
+
+### **Infra & DevOps**
+- Docker
+- GitHub Actions
+- `.env` + GitHub Secrets
+
+### **Data**
+- Synthetic ticket datasets (IT/HR/Finance)
+- Foundry metadata for agents
+- YAML runbooks
+
+---
+
+# 📁 Project Structure
+
+```text
+triresolve-service-desk/
+├── agents/
+│   ├── it/
+│   ├── hr/
+│   ├── finance/
+│   ├── security/
+│   ├── ops/
+│   ├── architect/
+│   └── orchestrator/
+│
+├── backend/
+│   ├── api/
+│   ├── services/
+│   ├── schemas.py
+│   ├── azure_client.py
+│   └── orchestrator.py
+│
+├── streamlit/
+│   ├── streamlit_app.py
+│   └── pages/
+│
+├── docs/
+├── runbooks/
+├── .env.example
+├── Dockerfile
+└── requirements.txt
 ```
 
 ---
 
-### 🧪 4. Synthetic Datasets
-
-Used for classifier training, agent prompts & testing.
-
-Sources:
-- HuggingFace IT helpdesk dataset  
-- Kaggle HR datasets  
-- Kaggle Finance datasets  
-
----
-
-## 🔄 High-Level Ticket Lifecycle
-
-```
-User → Backend → Classifier → Agent (IT/HR/Finance)
-		 → Runbook Execution → Resolution → User
-```
-
----
-
-## 📁 Project Structure
-
-```
-backend/
-	main.py
-	api/
-		routes.py
-	agents/
-		it_agent.py
-		hr_agent.py
-		finance_agent.py
-
-runbooks/
-	it/
-	hr/
-	finance/
-
-docs/
-	architecture.md
-
-requirements.txt
-Dockerfile
-```
-
----
-
-## 🐳 Development & Deployment
-
-### Local Development  
+# 🧪 Local Development
+### Run the Backend
 ```bash
-pip install -r requirements.txt
-uvicorn backend.main:app --reload
+uvicorn backend.api.main:app --reload
 ```
 
-### Docker Run  
+### Run Streamlit
+```bash
+streamlit run streamlit/streamlit_app.py
+```
+
+### Docker
 ```bash
 docker build -t triresolve-ai .
 docker run -p 8000:8000 triresolve-ai
 ```
 
-### API Docs  
-Visit:
+API docs available at:
 ```
 http://localhost:8000/docs
 ```
 
 ---
 
-## 🏆 Hackathon Deliverables
+# 🛡️ Responsible AI & Safety
+TriResolve AI was developed using strong Responsible AI principles to ensure safety, security, compliance, and ethical automation.
 
+### ✔ Privacy & Security by Design
+- Zero real user data used; 100% synthetic datasets
+- Secrets isolated in `.env` and GitHub Secrets
+- Azure RBAC enforced across OpenAI and Foundry resources
+- Logs avoid collecting PII and redact sensitive content
+
+### ✔ Agent Guardrails
+- Domain-specific allow/deny lists embedded in each agent
+- Orchestrator enforces safe multi-agent routing
+- Security Agent evaluates identity, access, and compliance risks
+- Finance, HR, and IT agents strictly follow policy-aligned boundaries
+
+### ✔ Explainability & Transparency
+- Orchestration logs show exactly which agents were called
+- Deterministic YAML runbooks create consistent, auditable outcomes
+- Each agent returns structured fields for full traceability
+
+### ✔ Ethical Automation
+- Designed to augment—not replace—human decision-making
+- Automated actions include built-in escalation pathways
+- Security, Ops, and HR agents elevate risk-sensitive requests to humans
+
+### ✔ Dataset Responsibility
+- No private or organizational datasets used
+- Synthetic tickets generated for IT, HR, and Finance
+- Dataset bias manually checked and minimized
+
+---
+
+# 🏆 Hackathon Deliverables
 TriResolve AI demonstrates:
-- Working multi-agent auto-resolution  
-- Accurate triage & classification  
-- Deterministic runbook workflows  
-- Reproducible ticket resolution demos  
-- Clear explainability for judges  
+- Fully working **multi-agent orchestration**
+- JSON-standardized outputs
+- Structured runbook-driven automation
+- Full audit + reasoning trace through TriNexa
+- A polished end-to-end UX
 
-### 📍 Project Milestones
-
-The project follows six key milestones:
-- **M1** – Foundations Ready
-- **M2** – Backend Routing + Agents
-- **M3** – Classifier + API
-- **M4** – Demo UX & Storyboard
-- **M5** – Full System Demo
+### Milestones
+- **M1** – Foundations
+- **M2** – Agents + Backend Routing
+- **M3** – Classifier Integration
+- **M4** – Demo UX + Streamlit
+- **M5** – End-to-End System Demo
 - **M6** – Final Submission
 
-See [docs/MILESTONES.md](docs/MILESTONES.md) for detailed milestone descriptions.
+---
+
+# 👥 Team TriResolve AI
+A globally distributed engineering team:
+
+### 🇺🇸 **Portia Jefferson**
+Lead Architect & AI Systems Designer
+
+### 🇵🇪 **Esthefany Humpire Vargas**
+Backend Developer & Data Engineer
+
+### 🇬🇧 **Nithya Kumar**
+Machine Learning Engineer
+
+### 🇺🇸 **Megan Nepshinsky**
+UX Contributor & Logic Reviewer
 
 ---
 
-## 👥 Team TriResolve AI
+# 💡 About the Creators
+TriResolve AI was created through collaborative engineering, multi‑agent experimentation, and cross‑domain product design by the TriResolve team.
 
-A globally distributed engineering team collaborating from the United States, Peru, and the United Kingdom.
-
-🇺🇸 Portia Jefferson  
-Role: Lead Architect & AI Systems Designer  
-GitHub: https://github.com/portiajefferson  
-LinkedIn: https://www.linkedin.com/in/portiajefferson/
-
-🇵🇪 Esthefany Humpire Vargas  
-Role: Backend Developer & Data Engineer  
-GitHub: https://github.com/steffahv  
-LinkedIn: https://www.linkedin.com/in/ehuvarg/
-
-🇬🇧 Nithya Kumar  
-Role: Machine Learning Engineer  
-GitHub: https://github.com/Nithyananthisenthilkumar  
-LinkedIn: https://www.linkedin.com/in/nithyananthi-senthilkumar/
-
-🇺🇸 Megan Nepshinsky  
-Role: Contributor • UX & Logic Reviewer  
-GitHub: https://github.com/megan-nepshinsky  
-LinkedIn: https://www.linkedin.com/in/megan-marie-janish/
-
----
-
-## 💙 About the Creator
-
-Built by Portia Jefferson  
-Cybersecurity • AI • Automation • Creative Intelligence
-
----
+The system is designed for extensibility, auditability, and real-world enterprise service desk automation.
