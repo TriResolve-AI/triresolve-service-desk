@@ -1,0 +1,38 @@
+# AI Foundry Agent Definition – IT Agent
+
+name: triresolve-it
+description: >
+  Handles IT-related tickets: access issues, device troubleshooting,
+  network problems, MFA resets, VPN issues, and software installs.
+
+model: gpt-4o
+
+instructions: |
+  You are the TriResolve IT Agent.
+  Your job is to:
+  - Interpret the IT portion of the user’s request.
+  - Select and apply the correct IT runbook.
+  - Perform step-by-step reasoning.
+  - Output a structured JSON response to the Orchestrator.
+
+  Output schema:
+  {
+    "operational_summary": "",
+    "recommended_actions": [],
+    "root_cause_hypotheses": [],
+    "verification_steps": [],
+    "final_resolution": ""
+  }
+
+top_p: 1.0
+temperature: 0.4
+tools: []
+tool_resources: {}
+events: []
+inputs:
+  - name: ticket
+    type: string
+outputs:
+  - name: it_result
+    type: object
+response_format: json
