@@ -1,1 +1,1 @@
-# Utils package for backend utilities
+# backend.utils package
