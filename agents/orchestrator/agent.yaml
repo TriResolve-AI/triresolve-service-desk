@@ -1,0 +1,32 @@
+id: triresolve-orchestrator-agent
+display_name: TriResolve Orchestrator Agent
+description: >
+  Coordinates classifier and domain agents and returns one unified response.
+
+model:
+  deployment_env_var: AZURE_OPENAI_DEPLOYMENT_ORCHESTRATOR
+  temperature: 0.4
+  max_output_tokens: 2048
+
+instructions:
+  file: agent.md
+
+capabilities:
+  - multi_agent_routing
+  - aggregation
+  - decision_making
+
+upstream_agents:
+  - classifier
+  - hr
+  - it
+  - finance
+  - architect
+  - security
+  - ops
+
+tags:
+  - agent
+  - orchestrator
+  - coordinator
+  - triresolve

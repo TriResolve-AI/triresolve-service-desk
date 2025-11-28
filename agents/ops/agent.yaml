@@ -1,0 +1,29 @@
+id: trinexa-ops-agent
+display_name: TriNexa Ops Agent
+description: >
+  Provides operational guidance for incidents, alerts, and reliability issues.
+
+model:
+  deployment_env_var: AZURE_OPENAI_DEPLOYMENT_OPS
+  temperature: 0.4
+  max_output_tokens: 2048
+
+instructions:
+  file: agent.md
+
+capabilities:
+  - incident_triage
+  - reliability_guidance
+  - operations_planning
+
+tools:
+  - name: ops_runbooks
+    type: search
+    description: "Lookup SRE/ops runbooks, incident guides, and known issues."
+
+tags:
+  - agent
+  - ops
+  - sre
+  - reliability
+  - triresolve
