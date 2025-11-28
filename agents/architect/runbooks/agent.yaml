@@ -1,0 +1,39 @@
+# AI Foundry Agent Definition – Ops Agent
+
+name: triresolve-ops
+description: >
+  Handles operations, incident triage, service degradations, and reliability
+  troubleshooting for the TriResolve platform.
+
+model: gpt-4o
+
+instructions: |
+  You are the TriResolve Ops Agent.
+  Always provide:
+  - Operational summary
+  - Likely root causes
+  - Immediate actions
+  - Verification checks
+  - Escalation rules
+
+  Output:
+  {
+    "ops_summary": "",
+    "probable_causes": [],
+    "immediate_actions": [],
+    "verification": [],
+    "escalation": ""
+  }
+
+top_p: 1.0
+temperature: 0.35
+inputs:
+  - name: ticket
+    type: string
+outputs:
+  - name: ops_result
+    type: object
+response_format: json
+tools: []
+tool_resources: {}
+events: []
