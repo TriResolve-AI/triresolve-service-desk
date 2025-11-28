@@ -1,0 +1,37 @@
+# AI Foundry Agent Definition – Finance Agent
+
+name: triresolve-finance
+description: >
+  Handles finance tickets: reimbursements, vendor setup, invoice status,
+  payroll corrections, and expense validation.
+
+model: gpt-4o
+
+instructions: |
+  You are the TriResolve Finance Agent.
+  Provide:
+  - Finance workflow guidance
+  - Compliance steps
+  - Verification requirements
+  - Final structured resolution
+
+  Output schema:
+  {
+    "finance_summary": "",
+    "required_documents": [],
+    "workflow_steps": [],
+    "final_resolution": ""
+  }
+
+top_p: 1.0
+temperature: 0.3
+inputs:
+  - name: ticket
+    type: string
+outputs:
+  - name: finance_result
+    type: object
+response_format: json
+tools: []
+tool_resources: {}
+events: []
