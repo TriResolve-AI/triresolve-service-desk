@@ -1,10 +1,15 @@
+# streamlit/streamlit_app.py
+
+import requests
 import streamlit as st
+
+from config import settings  # uses your unified config helper
 
 # --- PAGE CONFIG ---
 st.set_page_config(
     page_title="TriResolve AI – Service Desk Platform",
     page_icon="🧠",
-    layout="wide"
+    layout="wide",
 )
 
 # --- BASIC THEME TWEAKS VIA CSS ---
@@ -57,125 +62,75 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# --- SIDEBAR NAV ---
+# --- SIDEBAR NAV USING PAGE LINKS ---
 st.sidebar.title("TriResolve AI")
 st.sidebar.write("Service Desk Platform")
 
-nav = st.sidebar.radio(
-    "Navigation",
-    ["Overview", "Maps", "Assistant (TriNexa)", "About"],
+st.sidebar.markdown("#### Navigation")
+st.sidebar.page_link("streamlit_app.py", label="Overview", icon="🏠")
+st.sidebar.page_link("pages/1_Maps.py", label="Maps", icon="🗺️")
+st.sidebar.page_link("pages/2_Assistant.py", label="Assistant (TriNexa)", icon="🤖")
+st.sidebar.page_link("pages/3_About.py", label="About", icon="ℹ️")
+
+# --- BACKEND HEALTH CHECK ---
+BACKEND_HEALTH_URL = settings.backend_url.rstrip("/") + "/health"
+
+
+def check_backend_health() -> bool:
+    try:
+        resp = requests.get(BACKEND_HEALTH_URL, timeout=3)
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get("status") == "ok"
+    except Exception:
+        return False
+
+
+# --- OVERVIEW CONTENT (MAIN AREA) ---
+st.markdown(
+    """
+    <div class="triresolve-hero">
+        <h1>TriResolve AI – Service Desk Platform</h1>
+        <h3>Powered by TriNexa, your multi-domain orchestrator for IT, HR, and Finance.</h3>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
 
-# --- OVERVIEW SECTION ---
-if nav == "Overview":
-    st.markdown(
-        """
-        <div class="triresolve-hero">
-            <h1>TriResolve AI – Service Desk Platform</h1>
-            <h3>Powered by TriNexa, your multi-domain orchestrator for IT, HR, and Finance.</h3>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+col1, col2 = st.columns([2, 1])
 
-    col1, col2 = st.columns([2, 1])
-
-    with col1:
-        st.write(
-            """
-            TriResolve AI is your **multi-agent service desk layer** that will eventually:
-
-            - Ingest tickets and signals from IT, HR, and Finance systems  
-            - Route them through **TriNexa**, the global orchestrator  
-            - Delegate tasks to specialized agents  
-            - Aggregate resolutions and surface them back in one unified workspace
-            """
-        )
-
-    with col2:
-        st.markdown('<p class="section-label">Status</p>', unsafe_allow_html=True)
-        st.success("UI shell: online")
-        st.info("Backend orchestration: coming next")
-        st.info("Agent skills: to be wired to Azure OpenAI / SK")
-
-    st.divider()
-    st.markdown('<p class="section-label">Domains</p>', unsafe_allow_html=True)
-    st.markdown(
-        """
-        <span class="agent-badge">IT Service Desk</span>
-        <span class="agent-badge">HR & People Ops</span>
-        <span class="agent-badge">Finance & Spend</span>
-        """,
-        unsafe_allow_html=True,
-    )
-
-# --- MAPS SECTION ---
-elif nav == "Maps":
-    st.header("Agent & Workflow Maps")
-
-    st.markdown(
-        """
-        This section will show **visual maps** of how TriNexa routes work:
-
-        - Event → Orchestrator (TriNexa) → Domain agent  
-        - Escalation paths & fallbacks  
-        - Real-time status of in-flight tickets  
-
-        For the hackathon, this will likely be backed by a simple data model and
-        one or more diagrams (e.g., Mermaid, images, or Streamlit charts).
-        """
-    )
-
-    st.info("Placeholder: we’ll plug in the architecture diagram + runbooks from `/docs` here.")
-
-# --- ASSISTANT (TRINEXA) SECTION ---
-elif nav == "Assistant (TriNexa)":
-    st.header("TriNexa Assistant")
-
+with col1:
     st.write(
         """
-        This is the **front door** to the orchestration layer.
+        TriResolve AI is your **multi-agent service desk layer** that will eventually:
 
-        For now, it's a local placeholder UI.  
-        Later, it will call your Azure OpenAI / Semantic Kernel backend to:
-        - Classify intent  
-        - Route to IT / HR / Finance agents  
-        - Aggregate responses back to the user
+        - Ingest tickets and signals from IT, HR, and Finance systems  
+        - Route them through **TriNexa**, the global orchestrator  
+        - Delegate tasks to specialized agents  
+        - Aggregate resolutions and surface them back in one unified workspace
         """
     )
 
-    user_input = st.text_input("Ask TriNexa something:", placeholder="e.g. 'Reset my VPN access' or 'Where is my reimbursement?'")
+with col2:
+    st.markdown('<p class="section-label">Status</p>', unsafe_allow_html=True)
 
-    if user_input:
-        st.markdown("### Prototype response")
-        st.write(
-            f"""
-            _(Mock)_ TriNexa would:
+    ui_msg = "UI shell: online"
+    st.success(ui_msg)
 
-            1. Classify: understand this as `\"{user_input}\"`
-            2. Decide which domain agent to call (IT / HR / Finance)
-            3. Orchestrate one or more tool calls
-            4. Return the summarized resolution here
-            """
-        )
+    if check_backend_health():
+        st.success("Backend API: healthy")
+    else:
+        st.warning("Backend API: not reachable from Streamlit")
 
-# --- ABOUT SECTION ---
-elif nav == "About":
-    st.header("About TriResolve AI & TriNexa")
+    st.info("Agent skills: wired via Azure OpenAI / Foundry deployments")
 
-    st.write(
-        """
-        **TriResolve AI** is a multi-agent service desk platform built for the hackathon.
-
-        - **TriResolve AI** = the user-facing workspace  
-        - **TriNexa** = the orchestration brain that coordinates domain agents  
-        - **Agents** = IT, HR, Finance (and future domains)  
-
-        The goal is to show how a **single assistant** can safely route and resolve
-        work across multiple teams, powered by Azure, Semantic Kernel, and an
-        extensible agent architecture.
-        """
-    )
-
-    st.markdown("---")
-    st.caption("Hackathon build • This page will evolve as the architecture solidifies.")
+st.divider()
+st.markdown('<p class="section-label">Domains</p>', unsafe_allow_html=True)
+st.markdown(
+    """
+    <span class="agent-badge">IT Service Desk</span>
+    <span class="agent-badge">HR & People Ops</span>
+    <span class="agent-badge">Finance & Spend</span>
+    """,
+    unsafe_allow_html=True,
+)
