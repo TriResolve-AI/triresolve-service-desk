@@ -1,71 +1,15 @@
 # streamlit/pages/1_Maps.py
-# TriResolve AI – Maps & Service Desk Overview
 
-import pandas as pd
-import streamlit as st
-import altair as alt
 from pathlib import Path
 
-# ---- Brand Palette ----
-PALETTE = {
-    "cerulean": "#227C9D",
-    "sea_green": "#17C3B2",
-    "apricot": "#FFCB77",
-    "floral_white": "#FEF9EF",
-    "grapefruit": "#FE6D73",
-}
+import altair as alt
+import pandas as pd
+import streamlit as st
 
-DEPT_COLORS = {
-    "Finance": PALETTE["sea_green"],     # green-ish
-    "HR": PALETTE["apricot"],           # yellow-ish
-    "IT": PALETTE["grapefruit"],        # red-ish
-}
+from theme import inject_base_css
 
-# ---- Page Config ----
-st.set_page_config(
-    page_title="Maps – TriResolve AI",
-    page_icon="🗺️",
-    layout="wide",
-)
-
-# ---- Global Styles (background, sidebar, chips) ----
-st.markdown(
-    f"""
-    <style>
-    /* Main content background */
-    div.block-container {{
-        background-color: {PALETTE["floral_white"]};
-    }}
-
-    /* Sidebar gradient */
-    section[data-testid="stSidebar"] {{
-        background: linear-gradient(
-            180deg,
-            {PALETTE["cerulean"]} 0%,
-            {PALETTE["sea_green"]} 100%
-        );
-    }}
-
-    /* Headings */
-    h1, h2, h3, h4 {{
-        color: {PALETTE["cerulean"]};
-    }}
-
-    /* Department chips */
-    .dept-chip {{
-        display: inline-flex;
-        align-items: center;
-        padding: 0.25rem 0.75rem;
-        border-radius: 999px;
-        margin-right: 0.4rem;
-        font-size: 0.8rem;
-        font-weight: 600;
-        color: #0F172A;
-    }}
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+# Shared styles
+inject_base_css()
 
 st.title("🗺️ Maps & Service Desk Overview")
 st.write(
@@ -73,19 +17,37 @@ st.write(
     "across HR, IT, and Finance."
 )
 
+
 # ---- Data Loader ----
 @st.cache_data
 def load_ticket_data() -> pd.DataFrame:
     """Load and combine ticket samples from HR, IT, and Finance."""
-    hr = pd.read_csv("agents/hr/examples/hr_tickets.csv")
-    it = pd.read_csv("agents/it/examples/it_tickets.csv")
-    finance = pd.read_csv("agents/finance/examples/finance_tickets.csv")
+    root = Path(__file__).resolve().parents[2]
 
-    hr["department"] = "HR"
-    it["department"] = "IT"
-    finance["department"] = "Finance"
+    hr_path = root / "agents" / "hr" / "examples" / "hr_tickets.csv"
+    it_path = root / "agents" / "it" / "examples" / "it_tickets.csv"
+    fin_path = root / "agents" / "finance" / "examples" / "finance_tickets.csv"
 
-    all_tickets = pd.concat([hr, it, finance], ignore_index=True)
+    frames = []
+    if hr_path.exists():
+        hr = pd.read_csv(hr_path)
+        hr["department"] = "HR"
+        frames.append(hr)
+
+    if it_path.exists():
+        it = pd.read_csv(it_path)
+        it["department"] = "IT"
+        frames.append(it)
+
+    if fin_path.exists():
+        fin = pd.read_csv(fin_path)
+        fin["department"] = "Finance"
+        frames.append(fin)
+
+    if not frames:
+        return pd.DataFrame()
+
+    all_tickets = pd.concat(frames, ignore_index=True)
 
     # Parse date columns if present
     for col in ["created_at", "resolved_at"]:
@@ -94,7 +56,7 @@ def load_ticket_data() -> pd.DataFrame:
 
     return all_tickets
 
-# ---- Tabs ----
+
 tab1, tab2, tab3 = st.tabs(
     ["Ticket Patterns", "System Architecture", "Responsibility Map"]
 )
@@ -108,9 +70,12 @@ with tab1:
     df = load_ticket_data()
 
     if df.empty:
-        st.warning("No ticket data found. Please verify CSV paths.")
+        st.warning(
+            "No ticket data found. Please verify CSV paths under "
+            "`agents/*/examples/*.csv`."
+        )
     else:
-        # Department color legend chips
+        # Department chips legend
         st.markdown(
             f"""
             <div style="margin-bottom: 0.5rem;">
@@ -134,7 +99,7 @@ with tab1:
             unsafe_allow_html=True,
         )
 
-        # Department filter "buttons"
+        # Department filter
         selected_dept = st.radio(
             "Filter by department",
             ["All", "Finance", "HR", "IT"],
@@ -163,29 +128,25 @@ with tab1:
             else None
         )
 
-        kpi_cols = st.columns(3)
-        kpi_cols[0].metric("Total Tickets", total_tickets)
+        k1, k2, k3 = st.columns(3)
+        k1.metric("Total Tickets", total_tickets)
         if open_tickets is not None:
-            kpi_cols[1].metric("Open Tickets", open_tickets)
+            k2.metric("Open Tickets", open_tickets)
         if resolved_tickets is not None:
-            kpi_cols[2].metric("Resolved Tickets", resolved_tickets)
+            k3.metric("Resolved Tickets", resolved_tickets)
 
+        # Tickets by department (always from full dataset)
         st.markdown("### Tickets by Department")
 
         if "department" in df.columns:
-            # Group on full dataset so chart always shows all depts
-            by_dept = (
-                df.groupby("department")["ticket_id"].count()
-                if "ticket_id" in df.columns
-                else df.groupby("department").size()
-            )
-
-            chart_data = (
-                by_dept.reset_index()
-                .rename(columns={0: "ticket_count"})
-            )
             if "ticket_id" in df.columns:
-                chart_data = chart_data.rename(columns={"ticket_id": "ticket_count"})
+                by_dept = df.groupby("department")["ticket_id"].count()
+            else:
+                by_dept = df.groupby("department").size()
+
+            chart_data = by_dept.reset_index().rename(
+                columns={0: "ticket_count", "ticket_id": "ticket_count"}
+            )
 
             dept_order = ["Finance", "HR", "IT"]
             chart = (
