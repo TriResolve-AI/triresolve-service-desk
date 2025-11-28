@@ -99,7 +99,7 @@ else:
 st.divider()
 
 # --- Backend integration ---
-API_URL = "http://localhost:8000/orchestrator"  # adjust for your backend
+BACKEND_CHAT_URL = "http://localhost:8000/chat"  # no /api prefix since main.py is root
 
 user_query = st.text_area("Describe your request:", height=140, placeholder="I can't access VPN after the latest change...")
 
@@ -109,34 +109,28 @@ if st.button("Submit request", key="submit_request"):
     else:
         with st.spinner("Routing your request through TriNexa and domain agents..."):
             try:
-                # Build request payload - include selected domain if any
-                payload = {"ticket": user_query}
-                if st.session_state.selected_domain:
-                    payload["domain"] = st.session_state.selected_domain
+                domain = st.session_state.get("selected_domain")  # "it" / "hr" / "finance" / None
+                payload = {"message": user_query.strip(), "domain": domain}
 
-                resp = requests.post(API_URL, json=payload, timeout=30)
+                res = requests.post(BACKEND_CHAT_URL, json=payload, timeout=60)
             except requests.RequestException as e:
                 st.error("🚨 Could not reach the TriResolve backend. Please try again.")
                 st.caption(f"Details: {e}")
             else:
-                if resp.status_code != 200:
+                if res.status_code != 200:
                     st.error("⚠️ The service returned an error while processing your request.")
-                    st.caption(f"Status: {resp.status_code} • Body: {resp.text[:500]}")
+                    st.caption(f"Status: {res.status_code} • Body: {res.text[:500]}")
                 else:
-                    data = resp.json()
-
-                    # Adjust keys based on your backend response
-                    result = data.get("response", data)
-
-                    st.success("✅ Request processed successfully.")
-
-                    final_answer = result.get("final_answer") or result
-                    agents_consulted = result.get("agents_consulted", [])
-
-                    st.subheader("💬 Response")
-                    st.write(final_answer)
-
-                    if agents_consulted:
-                        st.subheader("🧩 Agents Involved")
-                        st.write(", ".join(agents_consulted))
+                    try:
+                        reply = res.json().get("reply", "")
+                    except ValueError:
+                        st.error("⚠️ Received an invalid response from the server.")
+                        st.caption(f"Body: {res.text[:500]}")
+                    else:
+                        if reply:
+                            st.success("✅ Request processed successfully.")
+                            st.subheader("💬 Response")
+                            st.write(reply)
+                        else:
+                            st.warning("⚠️ The server returned an empty response.")
 
