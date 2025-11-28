@@ -4,7 +4,7 @@ from pathlib import Path
 
 import streamlit as st
 
-from theme import PALETTE, inject_base_css
+from theme import inject_base_css
 
 inject_base_css()
 
