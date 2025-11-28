@@ -1,15 +1,20 @@
+# backend/api/routes.py
+
 from fastapi import APIRouter
-from pydantic import BaseModel
 
-router = APIRouter(prefix="/api")
+from .schemas import OrchestratorTicket, OrchestratorResponse
+from .services.orchestrator import run_orchestrator
 
-class Ticket(BaseModel):
-	title: str
-	description: str
-	category: str  # it, hr, finance
+router = APIRouter()
 
 
-@router.post("/classify")
-def classify_ticket(ticket: Ticket):
-	return {"category": ticket.category, "status": "classification complete"}
+@router.post("/orchestrate", response_model=OrchestratorResponse)
+async def orchestrate_ticket(ticket: OrchestratorTicket) -> OrchestratorResponse:
+    """
+    Accepts a ticket payload and returns the Orchestrator's response.
 
+    This is the main entrypoint the UI / Streamlit app should call
+    when a user submits a service desk request.
+    """
+    result_text = run_orchestrator(ticket.model_dump())
+    return OrchestratorResponse(answer=result_text)
