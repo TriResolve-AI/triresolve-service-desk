@@ -1,4 +1,5 @@
-from typing import Literal
+# backend/api/schemas.py
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -36,3 +37,36 @@ class TicketResult(BaseModel):
     ticket: TicketCreate
     classification: TicketClassification
     response: AgentResponse
+
+
+# ==============================
+# Chat-based API for Streamlit
+# ==============================
+
+
+class ChatRequest(BaseModel):
+    """
+    Generic chat-style request for the TriResolve Assistant.
+
+    `domain` is optional:
+      - If provided ("it", "hr", "finance", "security", "architect", "ops"),
+        the backend will route directly to that domain agent.
+      - If omitted, the orchestrator will decide how to route.
+    """
+
+    message: str = Field(
+        ...,
+        example="My VPN keeps disconnecting when I work from home.",
+    )
+    domain: Optional[str] = Field(
+        default=None,
+        description="Optional domain override: 'it', 'hr', 'finance', 'security', 'architect', or 'ops'.",
+    )
+
+
+class ChatResponse(BaseModel):
+    """
+    Simple chat-style response returned to the Streamlit UI.
+    """
+
+    reply: str
