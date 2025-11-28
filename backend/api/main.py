@@ -32,7 +32,8 @@ def health() -> dict:
 @app.post("/tickets/process", response_model=TicketResult)
 def process_ticket_endpoint(payload: TicketCreate) -> TicketResult:
     """
-    Ingest a ticket, classify it, route to the appropriate agent,
-    and return the full structured result.
+    Ingest a ticket, classify it, and call the TriResolve Orchestrator
+    Azure OpenAI deployment. Returns the full structured result the UI expects.
     """
     return process_ticket(payload)
+    
