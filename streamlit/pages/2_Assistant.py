@@ -143,7 +143,7 @@ with col_result:
                     clf = data.get("classification", {})
                     agent = data.get("response", {})
 
-                    with result_placeholder.container():
+                    with result_placeholder:
                         # Classification card
                         st.markdown(
                             f"""
