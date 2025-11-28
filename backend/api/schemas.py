@@ -70,4 +70,4 @@ class ChatResponse(BaseModel):
     Simple chat-style response returned to the Streamlit UI.
     """
 
-    reply: str
+    reply: str = Field(..., example="I've reset your VPN credentials. Please try reconnecting.")
