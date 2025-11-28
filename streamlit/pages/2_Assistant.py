@@ -1,136 +1,175 @@
-import sys
-from pathlib import Path
+# streamlit/pages/2_Assistant.py
 
-import streamlit as st
 import requests
+import streamlit as st
 
-# Add streamlit folder to path for theme import
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from theme import inject_base_css, page_header
+from config import settings  # uses your config.py helper
 
-# --- PAGE CONFIG ---
-st.set_page_config(page_title="TriResolve Assistant", page_icon="💬", layout="wide")
+# Build backend /chat URL from config backend_url
+BACKEND_CHAT_URL = settings.backend_url.rstrip("/") + "/chat"
 
-inject_base_css()  # global theming
 
-# Extra CSS JUST for the big agent cards
-st.markdown(
-    """
-    <style>
-    .agent-row {
-        margin-top: 2rem;
-        margin-bottom: 2rem;
+# -------------------------------
+# Small layout + style helpers
+# -------------------------------
+
+def init_session_state() -> None:
+    """Ensure required keys exist in st.session_state."""
+    if "selected_domain" not in st.session_state:
+        st.session_state["selected_domain"] = None  # "it" | "hr" | "finance"
+    if "chat_history" not in st.session_state:
+        st.session_state["chat_history"] = []  # list[dict]
+
+
+def domain_label(domain: str | None) -> str:
+    if domain is None:
+        return "Orchestrator (auto-route)"
+    mapping = {
+        "it": "IT Service Desk",
+        "hr": "HR & People Ops",
+        "finance": "Finance & Spend",
     }
-    .agent-card {
-        text-align: center;
+    return mapping.get(domain, domain.capitalize())
+
+
+def render_header() -> None:
+    st.title("TriNexa Assistant")
+    st.caption("Front door to the TriResolve multi-agent service desk.")
+
+    st.markdown(
+        """
+TriNexa is your **orchestrator** for IT, HR, and Finance requests.
+
+1. Classifies the request  
+2. Routes it to the right domain agent  
+3. Aggregates responses back in one conversation  
+        """
+    )
+
+
+def render_domain_cards() -> None:
+    """Three colored cards to pick the domain (orchestrator vs direct)."""
+
+    st.subheader("Which team do you need?")
+
+    col1, col2, col3 = st.columns(3)
+
+    def card(label: str, domain_key: str | None, bg: str):
+        is_active = st.session_state["selected_domain"] == domain_key
+        border = "3px solid #ffffff" if is_active else "1px solid rgba(255,255,255,0.2)"
+        alpha = "0.9" if is_active else "0.85"
+
+        button_label = f"**{label}**"
+        style = f"""
+        <style>
+        .tri-card-{label.replace(" ", "-").lower()} {{
+            background: {bg}CC;
+            border-radius: 16px;
+            border: {border};
+            padding: 1.25rem 0.75rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.15s ease-in-out;
+        }}
+        .tri-card-{label.replace(" ", "-").lower()}:hover {{
+            background: {bg}{alpha.replace(".", "")};
+            transform: translateY(-2px);
+        }}
+        </style>
+        """
+        st.markdown(style, unsafe_allow_html=True)
+
+        if st.button(
+            button_label,
+            key=f"btn-{label}",
+            use_container_width=True,
+        ):
+            st.session_state["selected_domain"] = domain_key
+
+        st.markdown(
+            f'<div class="tri-card-{label.replace(" ", "-").lower()}">{label}</div>',
+            unsafe_allow_html=True,
+        )
+
+    with col1:
+        card("IT Agent", "it", "#FE6D73")        # coral / red
+    with col2:
+        card("HR Agent", "hr", "#FFCB77")        # warm yellow
+    with col3:
+        card("Finance Agent", "finance", "#17C3B2")  # teal
+
+
+def render_domain_status() -> None:
+    domain = st.session_state["selected_domain"]
+    st.markdown("---")
+    st.write(
+        f"**Routing mode:** {domain_label(domain)}  "
+        "· You can switch domains at any time by clicking another card."
+    )
+
+
+def call_backend(message: str) -> str:
+    """Call FastAPI /chat endpoint and return the reply text."""
+    domain = st.session_state["selected_domain"]
+
+    payload = {
+        "message": message,
+        "domain": domain,  # None → orchestrator decides
     }
-    .agent-card button {
-        border-radius: 18px;
-        border: 4px solid #F7F4EF;
-        font-weight: 700;
-        font-size: 1.05rem;
-        padding: 1.8rem 0;
-        width: 100%;
-        box-shadow: 0 10px 24px rgba(0,0,0,0.10);
-    }
-    .agent-it button {
-        background-color: #E65C4E;  /* IT = coral */
-        color: #FFFFFF;
-    }
-    .agent-hr button {
-        background-color: #F2A83B;  /* HR = gold */
-        color: #0E3B66;
-    }
-    .agent-finance button {
-        background-color: #3BC5BE;  /* Finance = teal */
-        color: #0E3B66;
-    }
-    .agent-card button:hover {
-        filter: brightness(1.03);
-        transform: translateY(-2px);
-        transition: all 0.12s ease-out;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
 
-# Standard page header using your logo and tagline
-page_header(
-    "Need help?",
-    "Select which agent best suits your needs, or just start typing below.",
-)
+    try:
+        resp = requests.post(BACKEND_CHAT_URL, json=payload, timeout=60)
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get("reply", "(No reply content returned.)")
+    except Exception as exc:  # broad catch ok for UI
+        return f"⚠️ Error calling backend: {exc}"
 
-st.markdown("")  # a little spacing
 
-# Row of agent cards
-st.markdown('<div class="agent-row">', unsafe_allow_html=True)
-cols = st.columns(3)
+def render_chat_ui() -> None:
+    st.subheader("Ask TriNexa something")
 
-if "selected_domain" not in st.session_state:
-    st.session_state.selected_domain = None
+    # Show chat history
+    for turn in st.session_state["chat_history"]:
+        with st.chat_message("user"):
+            st.write(turn["user"])
+        with st.chat_message("assistant"):
+            st.write(turn["assistant"])
 
-with cols[0]:
-    st.markdown('<div class="agent-card agent-it">', unsafe_allow_html=True)
-    if st.button("IT AGENT", key="btn_it"):
-        st.session_state.selected_domain = "it"
-    st.markdown("</div>", unsafe_allow_html=True)
+    # New input
+    user_message = st.chat_input(
+        "Describe your issue or question…",
+    )
 
-with cols[1]:
-    st.markdown('<div class="agent-card agent-hr">', unsafe_allow_html=True)
-    if st.button("HR AGENT", key="btn_hr"):
-        st.session_state.selected_domain = "hr"
-    st.markdown("</div>", unsafe_allow_html=True)
+    if not user_message:
+        return
 
-with cols[2]:
-    st.markdown('<div class="agent-card agent-finance">', unsafe_allow_html=True)
-    if st.button("FINANCE AGENT", key="btn_finance"):
-        st.session_state.selected_domain = "finance"
-    st.markdown("</div>", unsafe_allow_html=True)
+    # Echo user message in UI
+    with st.chat_message("user"):
+        st.write(user_message)
 
-st.markdown("</div>", unsafe_allow_html=True)
+    # Call backend
+    with st.chat_message("assistant"):
+        with st.spinner("Routing through TriNexa…"):
+            reply = call_backend(user_message)
+            st.write(reply)
 
-# Show which agent is currently selected
-if st.session_state.selected_domain:
-    st.info(f"🎯 Routing to the **{st.session_state.selected_domain.upper()}** domain agent.")
-else:
-    st.caption("Tip: You can click an agent above to route directly, or let the orchestrator decide automatically.")
+    # Persist in session_state
+    st.session_state["chat_history"].append(
+        {"user": user_message, "assistant": reply}
+    )
 
-st.divider()
 
-# --- Backend integration ---
-BACKEND_CHAT_URL = "http://localhost:8000/chat"  # no /api prefix since main.py is root
+# -------------------------------
+# Page entrypoint
+# -------------------------------
+def main() -> None:
+    init_session_state()
+    render_header()
+    render_domain_cards()
+    render_domain_status()
+    render_chat_ui()
 
-user_query = st.text_area("Describe your request:", height=140, placeholder="I can't access VPN after the latest change...")
 
-if st.button("Submit request", key="submit_request"):
-    if not user_query.strip():
-        st.warning("Please enter a request description before submitting.")
-    else:
-        with st.spinner("Routing your request through TriNexa and domain agents..."):
-            try:
-                domain = st.session_state.get("selected_domain")  # "it" / "hr" / "finance" / None
-                payload = {"message": user_query.strip(), "domain": domain}
-
-                res = requests.post(BACKEND_CHAT_URL, json=payload, timeout=60)
-            except requests.RequestException as e:
-                st.error("🚨 Could not reach the TriResolve backend. Please try again.")
-                st.caption(f"Details: {e}")
-            else:
-                if res.status_code != 200:
-                    st.error("⚠️ The service returned an error while processing your request.")
-                    st.caption(f"Status: {res.status_code} • Body: {res.text[:500]}")
-                else:
-                    try:
-                        reply = res.json().get("reply", "")
-                    except ValueError:
-                        st.error("⚠️ Received an invalid response from the server.")
-                        st.caption(f"Body: {res.text[:500]}")
-                    else:
-                        if reply:
-                            st.success("✅ Request processed successfully.")
-                            st.subheader("💬 Response")
-                            st.write(reply)
-                        else:
-                            st.warning("⚠️ The server returned an empty response.")
-
+if __name__ == "__main__":
+    main()
