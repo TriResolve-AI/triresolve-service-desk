@@ -106,8 +106,6 @@ with col_form:
 
 with col_result:
     st.markdown("### Orchestrator Response")
-    result_placeholder = st.empty()
-
     if submit:
         if not title or not description:
             st.warning("Please provide both a **summary** and **details**.")
