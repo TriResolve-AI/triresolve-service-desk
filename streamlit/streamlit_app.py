@@ -4,7 +4,7 @@ from pathlib import Path
 
 import streamlit as st
 
-from theme import PALETTE, DEPT_COLORS, inject_base_css
+from theme import PALETTE, inject_base_css
 
 # ---- Page config (only here, not in sub-pages) ----
 st.set_page_config(
