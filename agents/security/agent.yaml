@@ -1,0 +1,29 @@
+id: trinexa-security-agent
+display_name: TriNexa Security Agent
+description: >
+  Evaluates security, privacy, and compliance risk and recommends controls.
+
+model:
+  deployment_env_var: AZURE_OPENAI_DEPLOYMENT_SECURITY
+  temperature: 0.3
+  max_output_tokens: 2048
+
+instructions:
+  file: agent.md
+
+capabilities:
+  - risk_assessment
+  - policy_check
+  - compliance_guidance
+
+tools:
+  - name: security_policies
+    type: search
+    description: "Lookup security, privacy, and compliance policies or standards."
+
+tags:
+  - agent
+  - security
+  - governance
+  - triresolve
+  - trinexa

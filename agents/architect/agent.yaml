@@ -1,0 +1,32 @@
+# TriNexa Architect Agent – metadata (repo-level, not secrets)
+
+id: trinexa-architect-agent
+display_name: TriNexa Architect Agent
+description: >
+  Designs solution architectures and multi-agent plans for the TriResolve AI Service Desk.
+
+model:
+  # This should correspond to AZURE_OPENAI_DEPLOYMENT_ARCHITECT
+  deployment_env_var: AZURE_OPENAI_DEPLOYMENT_ARCHITECT
+  temperature: 0.4
+  max_output_tokens: 2048
+
+instructions:
+  file: agent.md
+
+capabilities:
+  - planning
+  - decomposition
+  - architecture_guidance
+
+tools:
+  # These are logical placeholders; wire to real tools later if needed.
+  - name: knowledge_base
+    type: search
+    description: "Lookup reference architectures, policies, and platform docs."
+
+tags:
+  - agent
+  - architect
+  - triresolve
+  - trinexa
