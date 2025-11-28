@@ -1,8 +1,19 @@
+# backend/api/main.py
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.api.schemas import TicketCreate, TicketResult
+from backend.api.schemas import (
+    TicketCreate,
+    TicketResult,
+    ChatRequest,
+    ChatResponse,
+)
 from backend.services.orchestrator import process_ticket
+from backend.services.azure_client import (
+    orchestrator_chat,
+    domain_agent_chat,
+)
 
 app = FastAPI(
     title="TriResolve Service Desk API",
@@ -36,4 +47,21 @@ def process_ticket_endpoint(payload: TicketCreate) -> TicketResult:
     Azure OpenAI deployment. Returns the full structured result the UI expects.
     """
     return process_ticket(payload)
-    
+
+
+@app.post("/chat", response_model=ChatResponse)
+def chat_endpoint(payload: ChatRequest) -> ChatResponse:
+    """
+    Chat-style endpoint for the TriResolve Assistant (used by Streamlit).
+
+    - If `payload.domain` is provided ("it", "hr", "finance", etc.), we route
+      directly to that domain agent using Azure OpenAI.
+    - If `payload.domain` is omitted or None, we call the orchestrator and let
+      it decide how to coordinate agents.
+    """
+    if payload.domain:
+        reply = domain_agent_chat(payload.message, domain=payload.domain)
+    else:
+        reply = orchestrator_chat(payload.message)
+
+    return ChatResponse(reply=reply)
