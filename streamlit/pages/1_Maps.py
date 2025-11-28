@@ -1,45 +1,6 @@
- TriResolve AI – Maps Page Implementation (For Megan)
+# streamlit/pages/1_Maps.py
+# TriResolve AI – Maps & Service Desk Overview
 
-Below are the steps and the full `1_Maps.py` code for the **Maps & Service Desk Overview** page in Streamlit, including the brand colors and department-specific styling.
-
----
-## 1️⃣ What this page should do
-
-- Load sample tickets from:
-  - `agents/hr/examples/hr_tickets.csv`
-  - `agents/it/examples/it_tickets.csv`
-  - `agents/finance/examples/finance_tickets.csv`
-- Show **ticket patterns** (KPIs, tickets by department, tickets over time, category vs status).
-- Display the **system architecture diagram** (PNG) for the multi‑agent flow.
-- Provide a **responsibility map (RACI)** for HR, IT, Finance, Classifier, and Orchestrator.
-- Use the TriResolve brand colors:
-  - `#227C9D` – Cerulean (primary blue)
-  - `#17C3B2` – Light Sea Green (Finance)
-  - `#FFCB77` – Apricot Cream (HR)
-  - `#FEF9EF` – Floral White (background)
-  - `#FE6D73` – Grapefruit Pink (IT)
-
----
-## 2️⃣ Where this file lives
-
-Create (or replace) the file:
-
-```text
-streamlit/pages/1_Maps.py
-```
-
-Run Streamlit from the repo root:
-
-```bash
-streamlit run streamlit/streamlit_app.py
-```
-
-This will auto‑load the `1_Maps.py` file as the **“Maps & Service Desk Overview”** page.
-
----
-## 3️⃣ Full 1_Maps.py code (copy/paste)
-
-```python
 import pandas as pd
 import streamlit as st
 import altair as alt
@@ -112,7 +73,6 @@ st.write(
     "across HR, IT, and Finance."
 )
 
-
 # ---- Data Loader ----
 @st.cache_data
 def load_ticket_data() -> pd.DataFrame:
@@ -133,7 +93,6 @@ def load_ticket_data() -> pd.DataFrame:
             all_tickets[col] = pd.to_datetime(all_tickets[col], errors="coerce")
 
     return all_tickets
-
 
 # ---- Tabs ----
 tab1, tab2, tab3 = st.tabs(
@@ -317,7 +276,6 @@ with tab1:
                 "(missing 'category' or 'status' columns)."
             )
 
-
 # =========================
 # TAB 2: System Architecture
 # =========================
@@ -355,7 +313,6 @@ with tab2:
         - 🗄️ Data Sources: HRIS, IAM, ERP, Ticket DB
         """
     )
-
 
 # =========================
 # TAB 3: Responsibility Map
@@ -398,17 +355,3 @@ with tab3:
         - **I** = Informed (kept in the loop)
         """
     )
-```
-
----
-## 4️⃣ Quick notes for Megan
-
-- Double‑check that the CSVs you generate have at least these columns: `ticket_id`, `status`, `created_at`, `category` (or update the code if names differ).
-- Make sure the architecture diagram is saved as `streamlit/assets/triresolve_architecture.png`.
-- Once this file is in place, run the app from the repo root:
-
-  ```bash
-  streamlit run streamlit/streamlit_app.py
-  ```
-
-- You should see a **“Maps & Service Desk Overview”** page with three tabs and the new color palette applied.
