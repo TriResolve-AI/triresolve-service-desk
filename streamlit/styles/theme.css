@@ -1,0 +1,12 @@
+/* streamlit/styles/theme.css */
+/* Optional: reference colors here if you ever want to use st.markdown to load it */
+
+:root {
+  --tri-primary-blue: #005B8F;
+  --tri-teal: #2EB7A5;
+  --tri-gold: #F4B23E;
+  --tri-coral: #E8654F;
+  --tri-cream: #F5F1E5;
+  --tri-sky-top: #227C9D;
+  --tri-sky-bottom: #F2EDE2;
+}
