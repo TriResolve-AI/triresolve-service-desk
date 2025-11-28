@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 Department = Literal["IT", "HR", "Finance"]
 Priority = Literal["Low", "Medium", "High", "Critical"]
+Domain = Literal["it", "hr", "finance", "security", "architect", "ops"]
 
 
 class TicketCreate(BaseModel):
@@ -58,9 +59,9 @@ class ChatRequest(BaseModel):
         ...,
         example="My VPN keeps disconnecting when I work from home.",
     )
-    domain: Optional[str] = Field(
+    domain: Optional[Domain] = Field(
         default=None,
-        description="Optional domain override: 'it', 'hr', 'finance', 'security', 'architect', or 'ops'.",
+        description="Optional domain override.",
     )
 
 
