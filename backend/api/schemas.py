@@ -56,6 +56,7 @@ class ChatRequest(BaseModel):
 
     message: str = Field(
         ...,
+        min_length=1,
         example="My VPN keeps disconnecting when I work from home.",
     )
     domain: Optional[str] = Field(
