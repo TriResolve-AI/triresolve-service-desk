@@ -1,53 +1,111 @@
 # streamlit/pages/1_Maps.py
 
 from pathlib import Path
+from typing import Dict
 
 import altair as alt
 import pandas as pd
 import streamlit as st
 
-from theme import inject_base_css
+# -------------------------------------------------------------------
+# Brand palette (aligned with TriResolveAI logo)
+# -------------------------------------------------------------------
+PALETTE: Dict[str, str] = {
+    "deep_blue": "#00547D",     # header / hero
+    "teal": "#1FB7A6",          # teal loop
+    "gold": "#F3B147",          # gold loop
+    "coral": "#F2654C",         # coral loop
+    "soft_cream": "#FFF7E8",    # main background
+    "ink": "#121826",           # dark text / cards
+}
 
-# Shared styles
-inject_base_css()
+DEPT_COLORS: Dict[str, str] = {
+    "Finance": PALETTE["teal"],     # green-ish / teal
+    "HR": PALETTE["gold"],          # yellow-gold
+    "IT": PALETTE["coral"],         # warm red-coral
+}
 
+# -------------------------------------------------------------------
+# Page config
+# -------------------------------------------------------------------
+st.set_page_config(
+    page_title="Maps – TriResolve AI",
+    page_icon="🗺️",
+    layout="wide",
+)
+
+# -------------------------------------------------------------------
+# Global styles
+# -------------------------------------------------------------------
+st.markdown(
+    f"""
+    <style>
+    /* Main content background */
+    div.block-container {{
+        background-color: {PALETTE["soft_cream"]};
+        padding-top: 2.5rem;
+        padding-bottom: 2.5rem;
+    }}
+
+    /* Sidebar gradient */
+    section[data-testid="stSidebar"] {{
+        background: linear-gradient(
+            180deg,
+            {PALETTE["deep_blue"]} 0%,
+            {PALETTE["teal"]} 100%
+        );
+    }}
+
+    /* Headings */
+    h1, h2, h3, h4 {{
+        color: {PALETTE["deep_blue"]};
+    }}
+
+    /* Tab label tweaks */
+    button[data-baseweb="tab"] > div {{
+        font-weight: 600;
+    }}
+
+    /* Department chips */
+    .dept-chip {{
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.75rem;
+        border-radius: 999px;
+        margin-right: 0.4rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #0F172A;
+    }}
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+# -------------------------------------------------------------------
+# Title / intro
+# -------------------------------------------------------------------
 st.title("🗺️ Maps & Service Desk Overview")
 st.write(
     "High-level view of ticket patterns, system architecture, and ownership "
     "across HR, IT, and Finance."
 )
 
-
-# ---- Data Loader ----
+# -------------------------------------------------------------------
+# Data loader
+# -------------------------------------------------------------------
 @st.cache_data
 def load_ticket_data() -> pd.DataFrame:
     """Load and combine ticket samples from HR, IT, and Finance."""
-    root = Path(__file__).resolve().parents[2]
+    hr = pd.read_csv("agents/hr/examples/hr_tickets.csv")
+    it = pd.read_csv("agents/it/examples/it_tickets.csv")
+    finance = pd.read_csv("agents/finance/examples/finance_tickets.csv")
 
-    hr_path = root / "agents" / "hr" / "examples" / "hr_tickets.csv"
-    it_path = root / "agents" / "it" / "examples" / "it_tickets.csv"
-    fin_path = root / "agents" / "finance" / "examples" / "finance_tickets.csv"
+    hr["department"] = "HR"
+    it["department"] = "IT"
+    finance["department"] = "Finance"
 
-    frames = []
-    if hr_path.exists():
-        hr = pd.read_csv(hr_path)
-        hr["department"] = "HR"
-        frames.append(hr)
-
-    if it_path.exists():
-        it = pd.read_csv(it_path)
-        it["department"] = "IT"
-        frames.append(it)
-
-    if fin_path.exists():
-        fin = pd.read_csv(fin_path)
-        fin["department"] = "Finance"
-        frames.append(fin)
-
-    if not frames:
-        return pd.DataFrame()
-
-    all_tickets = pd.concat(frames, ignore_index=True)
+    all_tickets = pd.concat([hr, it, finance], ignore_index=True)
 
     # Parse date columns if present
     for col in ["created_at", "resolved_at"]:
@@ -57,6 +115,9 @@ def load_ticket_data() -> pd.DataFrame:
     return all_tickets
 
 
+# -------------------------------------------------------------------
+# Tabs
+# -------------------------------------------------------------------
 tab1, tab2, tab3 = st.tabs(
     ["Ticket Patterns", "System Architecture", "Responsibility Map"]
 )
@@ -70,28 +131,29 @@ with tab1:
     df = load_ticket_data()
 
     if df.empty:
-        st.warning(
-            "No ticket data found. Please verify CSV paths under "
-            "`agents/*/examples/*.csv`."
-        )
+        st.warning("No ticket data found. Please verify CSV paths.")
     else:
-        # Department chips legend
+        # Department chips (uses DEPT_COLORS safely)
+        finance_color = DEPT_COLORS["Finance"]
+        hr_color = DEPT_COLORS["HR"]
+        it_color = DEPT_COLORS["IT"]
+
         st.markdown(
             f"""
-            <div style="margin-bottom: 0.5rem;">
+            <div style="margin-bottom: 0.75rem;">
               <span class="dept-chip"
-                    style="background-color:{DEPT_COLORS['Finance']}33;
-                           border:1px solid {DEPT_COLORS['Finance']};">
+                    style="background-color:{finance_color}33;
+                           border:1px solid {finance_color};">
                 Finance
               </span>
               <span class="dept-chip"
-                    style="background-color:{DEPT_COLORS['HR']}33;
-                           border:1px solid {DEPT_COLORS['HR']};">
+                    style="background-color:{hr_color}33;
+                           border:1px solid {hr_color};">
                 HR
               </span>
               <span class="dept-chip"
-                    style="background-color:{DEPT_COLORS['IT']}33;
-                           border:1px solid {DEPT_COLORS['IT']};">
+                    style="background-color:{it_color}33;
+                           border:1px solid {it_color};">
                 IT
               </span>
             </div>
@@ -128,27 +190,29 @@ with tab1:
             else None
         )
 
-        k1, k2, k3 = st.columns(3)
-        k1.metric("Total Tickets", total_tickets)
+        kpi_cols = st.columns(3)
+        kpi_cols[0].metric("Total Tickets", total_tickets)
         if open_tickets is not None:
-            k2.metric("Open Tickets", open_tickets)
+            kpi_cols[1].metric("Open Tickets", open_tickets)
         if resolved_tickets is not None:
-            k3.metric("Resolved Tickets", resolved_tickets)
+            kpi_cols[2].metric("Resolved Tickets", resolved_tickets)
 
-        # Tickets by department (always from full dataset)
+        # Tickets by department (always show full picture)
         st.markdown("### Tickets by Department")
 
         if "department" in df.columns:
-            if "ticket_id" in df.columns:
-                by_dept = df.groupby("department")["ticket_id"].count()
-            else:
-                by_dept = df.groupby("department").size()
+            by_dept = (
+                df.groupby("department")["ticket_id"].count()
+                if "ticket_id" in df.columns
+                else df.groupby("department").size()
+            )
 
             chart_data = by_dept.reset_index().rename(
-                columns={0: "ticket_count", "ticket_id": "ticket_count"}
+                columns={"ticket_id": "ticket_count", 0: "ticket_count"}
             )
 
             dept_order = ["Finance", "HR", "IT"]
+
             chart = (
                 alt.Chart(chart_data)
                 .mark_bar()
@@ -159,23 +223,18 @@ with tab1:
                         "department:N",
                         scale=alt.Scale(
                             domain=dept_order,
-                            range=[
-                                DEPT_COLORS["Finance"],
-                                DEPT_COLORS["HR"],
-                                DEPT_COLORS["IT"],
-                            ],
+                            range=[finance_color, hr_color, it_color],
                         ),
                         legend=None,
                     ),
                 )
                 .properties(height=320)
             )
-
             st.altair_chart(chart, use_container_width=True)
         else:
             st.info("No 'department' column found in the dataset.")
 
-        # Tickets over time (using filtered view)
+        # Tickets over time (filtered view)
         if "created_at" in df_view.columns and "department" in df_view.columns:
             st.markdown("### Ticket Volume Over Time")
 
@@ -196,11 +255,7 @@ with tab1:
                         "department:N",
                         scale=alt.Scale(
                             domain=["Finance", "HR", "IT"],
-                            range=[
-                                DEPT_COLORS["Finance"],
-                                DEPT_COLORS["HR"],
-                                DEPT_COLORS["IT"],
-                            ],
+                            range=[finance_color, hr_color, it_color],
                         ),
                         title="Department",
                     ),
