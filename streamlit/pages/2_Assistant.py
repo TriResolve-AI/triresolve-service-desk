@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict
 from pathlib import Path
+import os
 import sys
 
 import requests
@@ -11,15 +12,26 @@ import streamlit as st
 
 from theme import PALETTE, DEPT_COLORS, inject_base_css
 
-# Ensure repo root is on sys.path so `from config import settings` resolves
-# when Streamlit runs from a nested mount. Go up two parents to reach
-# the workspace root (`/mount/src/triresolve-service-desk`).
+# Ensure repo root is on sys.path so imports resolve when Streamlit runs
+# from a nested mount. Go up two parents to reach the workspace root.
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.append(str(ROOT))
 
-# Note: `config` may not be available in all environments; any backend URL
-# is read from environment variables at submit time instead of relying on
-# `settings` here.
+# --- Backend configuration ---------------------------------------------------
+# Read the backend URL from env so it works on Streamlit Cloud
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
+
+TICKETS_ENDPOINT = f"{BACKEND_URL}/tickets/process"
+HEALTH_ENDPOINT = f"{BACKEND_URL}/health"
+
+
+def submit_ticket(payload: Dict[str, Any]) -> Dict[str, Any]:
+    try:
+        resp = requests.post(TICKETS_ENDPOINT, json=payload, timeout=10)
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as exc:
+        return {"error": str(exc)}
 
 # Shared styles
 inject_base_css()
@@ -98,12 +110,6 @@ with col_result:
         if not title or not description:
             st.warning("Please provide both a **summary** and **details**.")
         else:
-            import os
-
-            # Read backend URL from env (or default to local FastAPI)
-            backend_url = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
-            url = f"{backend_url}/tickets/process"
-
             full_description = description
             if st.session_state.selected_domain != "Auto":
                 full_description = (
@@ -118,14 +124,12 @@ with col_result:
             }
 
             with st.spinner("Asking TriNexa and domain agents..."):
-                try:
-                    resp = requests.post(url, json=payload, timeout=45)
-                    resp.raise_for_status()
-                    data = resp.json()
-                except Exception as exc:  # noqa: BLE001
+                data = submit_ticket(payload)
+
+                if data.get("error"):
                     st.error(
-                        f"Error contacting backend at `{url}`. "
-                        f"Check that FastAPI is running.\n\n{exc}"
+                        f"Error contacting backend at `{TICKETS_ENDPOINT}`. "
+                        f"Check that FastAPI is running.\n\n{data.get('error')}"
                     )
                 else:
                     clf = data.get("classification", {})
