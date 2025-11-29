@@ -260,3 +260,4 @@ with col_result:
 
                     with st.expander("Raw response (debug)"):
                         st.json(data)
+
