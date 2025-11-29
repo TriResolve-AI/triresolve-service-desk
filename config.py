@@ -192,4 +192,9 @@ class Settings:
 
     @property
     def aiproject_resource_id(self) -> str | None:
-        return self.
+        return self._get("azure", "AZURE_AIPROJECT_RESOURCE_ID")
+
+
+# Single shared settings instance for easy import (e.g. `from config import settings`).
+# Using a plain instance keeps things simple for this sample project.
+settings = Settings()

@@ -9,6 +9,8 @@ Backends, Streamlit pages, and background jobs can import these helpers to
 avoid duplicating connection logic.
 """
 
+import os
+import json
 from functools import lru_cache
 from typing import Iterable, Mapping, Any, List
 
@@ -40,7 +42,7 @@ def get_azure_openai_client() -> AzureOpenAI:
 
 
 def chat_completion(
-    messages: Iterable[Mapping[str, Any]],
+    messages: Iterable[Mapping[str, Any]] | str | None = None,
     model: str | None = None,
     temperature: float = 0.2,
     max_tokens: int | None = None,
@@ -62,10 +64,68 @@ def chat_completion(
     s = _get_settings()
     deployment = model or s.d_orchestrator
 
-    client = get_azure_openai_client()
+    # Accept the following calling patterns (the repo uses all of these):
+    # 1) chat_completion(messages=[...])
+    # 2) chat_completion(SYSTEM_PROMPT, user_prompt)
+    # 3) chat_completion(system_prompt=..., user_prompt=..., model=...)
+    if "system_prompt" in kwargs:
+        system_prompt = kwargs.pop("system_prompt")
+        user_prompt = kwargs.pop("user_prompt", "")
+        messages_list = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+        deployment = kwargs.pop("model", None) or model or s.d_orchestrator
+    elif isinstance(messages, str):
+        system_prompt = messages
+        user_prompt = model if isinstance(model, str) else kwargs.pop("user_prompt", "")
+        messages_list = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+        deployment = kwargs.pop("model", None) or s.d_orchestrator
+    elif messages is None:
+        raise TypeError("chat_completion requires messages or system_prompt/user_prompt")
+    else:
+        messages_list = list(messages)
+        deployment = model or s.d_orchestrator
+
+    # Dev-mode fallback: if TRIRESOLVE_DEV_MODE is set to true, or the
+    # Azure OpenAI client cannot be created (missing creds), return canned
+    # responses for fast local testing.
+    dev_mode = os.getenv("TRIRESOLVE_DEV_MODE", "").lower() in ("1", "true", "yes")
+    if dev_mode:
+        # Read optional overrides from env so callers can configure canned
+        # responses without changing code.
+        canned_class = os.getenv("TRIRESOLVE_CANNED_CLASSIFICATION")
+        canned_reply = os.getenv("TRIRESOLVE_CANNED_REPLY")
+
+        # If this looks like a classifier call (system + user, expecting JSON),
+        # return a simple, valid JSON classification. Use the env override if
+        # provided, otherwise fall back to a sensible default.
+        combined = " ".join([m.get("content", "") for m in messages_list if isinstance(m, Mapping)])
+        if "classify" in combined.lower() or "router" in combined.lower():
+            if canned_class:
+                return canned_class.strip()
+            return '{"department": "IT", "confidence": 0.95, "rationale": "Contains VPN/connect keywords"}'
+
+        # Non-classifier replies: return the canned reply if present.
+        if canned_reply:
+            return canned_reply
+
+        # Default human-friendly assistant reply.
+        return "Thank you — a TriResolve agent will investigate your issue and follow up shortly."
+
+    # If not in dev mode, attempt to create the Azure client; surface
+    # configuration errors clearly.
+    try:
+        client = get_azure_openai_client()
+    except Exception:
+        raise
+
     response = client.chat.completions.create(
         model=deployment,
-        messages=list(messages),
+        messages=messages_list,
         temperature=temperature,
         max_tokens=max_tokens,
         **kwargs,
