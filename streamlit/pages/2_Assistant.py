@@ -3,11 +3,23 @@
 from __future__ import annotations
 
 from typing import Any, Dict
+from pathlib import Path
+import sys
 
 import requests
 import streamlit as st
 
 from theme import PALETTE, DEPT_COLORS, inject_base_css
+
+# Ensure repo root is on sys.path so `from config import settings` resolves
+# when Streamlit runs from a nested mount. Go up two parents to reach
+# the workspace root (`/mount/src/triresolve-service-desk`).
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.append(str(ROOT))
+
+# Note: `config` may not be available in all environments; any backend URL
+# is read from environment variables at submit time instead of relying on
+# `settings` here.
 
 # Shared styles
 inject_base_css()
@@ -86,9 +98,10 @@ with col_result:
         if not title or not description:
             st.warning("Please provide both a **summary** and **details**.")
         else:
-            from config import settings  # imported lazily so config can read secrets/env
+            import os
 
-            backend_url = settings._get('backend', 'BACKEND_URL', 'http://localhost:8000').rstrip("/")
+            # Read backend URL from env (or default to local FastAPI)
+            backend_url = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
             url = f"{backend_url}/tickets/process"
 
             full_description = description
