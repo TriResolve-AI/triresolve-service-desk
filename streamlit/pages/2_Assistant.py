@@ -1,175 +1,183 @@
 # streamlit/pages/2_Assistant.py
 
+from __future__ import annotations
+
+from typing import Any, Dict
+
 import requests
 import streamlit as st
 
-from config import settings  # uses your config.py helper
+from theme import PALETTE, DEPT_COLORS, inject_base_css
 
-# Build backend /chat URL from config backend_url
-BACKEND_CHAT_URL = settings.backend_url.rstrip("/") + "/chat"
+# Shared styles
+inject_base_css()
 
+st.title("🤝 TriNexa Assistant")
 
-# -------------------------------
-# Small layout + style helpers
-# -------------------------------
+st.write(
+    """
+    This is the **front door** to the orchestration layer.
 
-def init_session_state() -> None:
-    """Ensure required keys exist in st.session_state."""
-    if "selected_domain" not in st.session_state:
-        st.session_state["selected_domain"] = None  # "it" | "hr" | "finance"
-    if "chat_history" not in st.session_state:
-        st.session_state["chat_history"] = []  # list[dict]
+    TriNexa will eventually:
+    - Classify intent  
+    - Route to IT / HR / Finance agents  
+    - Aggregate responses back to the user  
+    """
+)
 
+st.markdown("<p class='section-label'>Choose a department (optional)</p>", unsafe_allow_html=True)
 
-def domain_label(domain: str | None) -> str:
-    if domain is None:
-        return "Orchestrator (auto-route)"
-    mapping = {
-        "it": "IT Service Desk",
-        "hr": "HR & People Ops",
-        "finance": "Finance & Spend",
-    }
-    return mapping.get(domain, domain.capitalize())
+AGENT_COLORS = {
+    "IT": DEPT_COLORS["IT"],
+    "HR": DEPT_COLORS["HR"],
+    "Finance": DEPT_COLORS["Finance"],
+}
 
-
-def render_header() -> None:
-    st.title("TriNexa Assistant")
-    st.caption("Front door to the TriResolve multi-agent service desk.")
-
-    st.markdown(
-        """
-TriNexa is your **orchestrator** for IT, HR, and Finance requests.
-
-1. Classifies the request  
-2. Routes it to the right domain agent  
-3. Aggregates responses back in one conversation  
-        """
-    )
+if "selected_domain" not in st.session_state:
+    st.session_state.selected_domain = "Auto"
 
 
-def render_domain_cards() -> None:
-    """Three colored cards to pick the domain (orchestrator vs direct)."""
+def agent_button(label: str, domain: str, color: str, key: str) -> None:
+    is_selected = st.session_state.selected_domain == domain
+    bg = f"{color}22" if is_selected else f"{color}18"
+    border = color if is_selected else f"{color}55"
 
-    st.subheader("Which team do you need?")
-
-    col1, col2, col3 = st.columns(3)
-
-    def card(label: str, domain_key: str | None, bg: str):
-        is_active = st.session_state["selected_domain"] == domain_key
-        border = "3px solid #ffffff" if is_active else "1px solid rgba(255,255,255,0.2)"
-        alpha = "0.9" if is_active else "0.85"
-
-        button_label = f"**{label}**"
-        style = f"""
-        <style>
-        .tri-card-{label.replace(" ", "-").lower()} {{
-            background: {bg}CC;
-            border-radius: 16px;
-            border: {border};
-            padding: 1.25rem 0.75rem;
-            text-align: center;
+    button_html = f"""
+        <button style="
+            width: 100%;
+            border-radius: 18px;
+            padding: 0.9rem 1.1rem;
+            background: {bg};
+            border: 2px solid {border};
+            color: #0F172A;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
             cursor: pointer;
-            transition: all 0.15s ease-in-out;
-        }}
-        .tri-card-{label.replace(" ", "-").lower()}:hover {{
-            background: {bg}{alpha.replace(".", "")};
-            transform: translateY(-2px);
-        }}
-        </style>
-        """
-        st.markdown(style, unsafe_allow_html=True)
+        ">{label}</button>
+    """
 
-        if st.button(
-            button_label,
-            key=f"btn-{label}",
-            use_container_width=True,
-        ):
-            st.session_state["selected_domain"] = domain_key
+    if st.button(label, key=key, use_container_width=True):
+        st.session_state.selected_domain = domain
 
-        st.markdown(
-            f'<div class="tri-card-{label.replace(" ", "-").lower()}">{label}</div>',
-            unsafe_allow_html=True,
-        )
-
-    with col1:
-        card("IT Agent", "it", "#FE6D73")        # coral / red
-    with col2:
-        card("HR Agent", "hr", "#FFCB77")        # warm yellow
-    with col3:
-        card("Finance Agent", "finance", "#17C3B2")  # teal
-
-
-def render_domain_status() -> None:
-    domain = st.session_state["selected_domain"]
-    st.markdown("---")
-    st.write(
-        f"**Routing mode:** {domain_label(domain)}  "
-        "· You can switch domains at any time by clicking another card."
+    # Override default button styling using markdown (visual only)
+    st.markdown(
+        f"<div style='margin-top:-3rem; visibility:hidden;'>x</div>{button_html}",
+        unsafe_allow_html=True,
     )
 
 
-def call_backend(message: str) -> str:
-    """Call FastAPI /chat endpoint and return the reply text."""
-    domain = st.session_state["selected_domain"]
+c1, c2, c3, c4 = st.columns(4)
 
-    payload = {
-        "message": message,
-        "domain": domain,  # None → orchestrator decides
-    }
+with c1:
+    if st.button("Auto", key="btn_auto", use_container_width=True):
+        st.session_state.selected_domain = "Auto"
+    st.caption("Let TriNexa pick the best agent.")
 
-    try:
-        resp = requests.post(BACKEND_CHAT_URL, json=payload, timeout=60)
-        resp.raise_for_status()
-        data = resp.json()
-        return data.get("reply", "(No reply content returned.)")
-    except Exception as exc:  # broad catch ok for UI
-        return f"⚠️ Error calling backend: {exc}"
+with c2:
+    agent_button("IT Agent", "IT", AGENT_COLORS["IT"], "btn_it")
+
+with c3:
+    agent_button("HR Agent", "HR", AGENT_COLORS["HR"], "btn_hr")
+
+with c4:
+    agent_button("Finance Agent", "Finance", AGENT_COLORS["Finance"], "btn_fin")
 
 
-def render_chat_ui() -> None:
-    st.subheader("Ask TriNexa something")
+st.markdown("---")
+st.markdown("<p class='section-label'>Describe your request</p>", unsafe_allow_html=True)
 
-    # Show chat history
-    for turn in st.session_state["chat_history"]:
-        with st.chat_message("user"):
-            st.write(turn["user"])
-        with st.chat_message("assistant"):
-            st.write(turn["assistant"])
+col_form, col_result = st.columns([1.3, 1.7])
 
-    # New input
-    user_message = st.chat_input(
-        "Describe your issue or question…",
+with col_form:
+    title = st.text_input("Short summary", placeholder="e.g. 'Cannot access VPN'")
+    description = st.text_area(
+        "Details",
+        placeholder="Describe what's happening, affected systems, and any error messages.",
+        height=160,
+    )
+    priority = st.selectbox(
+        "Priority",
+        ["Low", "Medium", "High", "Critical"],
+        index=1,
     )
 
-    if not user_message:
-        return
+    submit = st.button("Submit to TriNexa", type="primary")
 
-    # Echo user message in UI
-    with st.chat_message("user"):
-        st.write(user_message)
+with col_result:
+    st.markdown("### Orchestrator Response")
+    if submit:
+        if not title or not description:
+            st.warning("Please provide both a **summary** and **details**.")
+        else:
+            from config import settings  # imported lazily so config can read secrets/env
 
-    # Call backend
-    with st.chat_message("assistant"):
-        with st.spinner("Routing through TriNexa…"):
-            reply = call_backend(user_message)
-            st.write(reply)
+            backend_url = settings._get('backend', 'BACKEND_URL', 'http://localhost:8000').rstrip("/")
+            url = f"{backend_url}/tickets/process"
 
-    # Persist in session_state
-    st.session_state["chat_history"].append(
-        {"user": user_message, "assistant": reply}
-    )
+            full_description = description
+            if st.session_state.selected_domain != "Auto":
+                full_description = (
+                    f"[Preferred department: {st.session_state.selected_domain}] "
+                    + description
+                )
 
+            payload: Dict[str, Any] = {
+                "title": title,
+                "description": full_description,
+                "priority": priority,
+            }
 
-# -------------------------------
-# Page entrypoint
-# -------------------------------
-def main() -> None:
-    init_session_state()
-    render_header()
-    render_domain_cards()
-    render_domain_status()
-    render_chat_ui()
+            with st.spinner("Asking TriNexa and domain agents..."):
+                try:
+                    resp = requests.post(url, json=payload, timeout=45)
+                    resp.raise_for_status()
+                    data = resp.json()
+                except Exception as exc:  # noqa: BLE001
+                    st.error(
+                        f"Error contacting backend at `{url}`. "
+                        f"Check that FastAPI is running.\n\n{exc}"
+                    )
+                else:
+                    clf = data.get("classification", {})
+                    agent = data.get("response", {})
 
+                    with result_placeholder:
+                        # Classification card
+                        st.markdown(
+                            f"""
+                            <div class="tr-card" style="border-left: 4px solid {PALETTE['primary_blue']}">
+                                <strong>Classification</strong><br/>
+                                Department: <b>{clf.get('department', '—')}</b><br/>
+                                Confidence: {clf.get('confidence', '—')}<br/>
+                                <span style="font-size:0.85rem; opacity:0.9;">
+                                {clf.get('rationale', '')}
+                                </span>
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+                        st.markdown("")
 
-if __name__ == "__main__":
-    main()
+                        # Agent response card
+                        dept = agent.get("department", "—")
+                        dept_color = DEPT_COLORS.get(dept, PALETTE["primary_blue"])
+
+                        st.markdown(
+                            f"""
+                            <div class="tr-card" style="border-left: 4px solid {dept_color}">
+                                <strong>Agent:</strong> {agent.get('agent_name', 'TriResolve Agent')}<br/>
+                                <strong>Department:</strong> {dept}<br/><br/>
+                                <strong>Summary</strong><br/>
+                                {agent.get('summary', '—')}<br/><br/>
+                                <strong>Recommended steps</strong><br/>
+                                <pre style="white-space:pre-wrap; font-size:0.85rem;">
+{agent.get('steps', '').strip()}
+                                </pre>
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+
+                        with st.expander("Raw response (debug)"):
+                            st.json(data)
