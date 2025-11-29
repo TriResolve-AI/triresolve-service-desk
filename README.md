@@ -177,6 +177,40 @@ http://localhost:8000/docs
 
 ---
 
+## 🧪 Dev Mode (TRIRESOLVE_DEV_MODE)
+
+- **Purpose:** Run the backend locally without Azure OpenAI credentials. When
+    `TRIRESOLVE_DEV_MODE` is enabled the backend will return canned, deterministic
+    responses useful for UI development and testing.
+- **Environment variables:**
+    - `TRIRESOLVE_DEV_MODE` — set to `1`, `true`, or `yes` to enable dev mode.
+    - `TRIRESOLVE_CANNED_CLASSIFICATION` — optional JSON string returned for
+        classifier-style prompts (example: `{"department":"IT","confidence":0.95,"rationale":"..."}`).
+    - `TRIRESOLVE_CANNED_REPLY` — optional short text reply used for general
+        orchestrator/domain responses.
+- **Run server in dev mode:**
+
+    ```bash
+    export TRIRESOLVE_DEV_MODE=true
+    # optional overrides
+    export TRIRESOLVE_CANNED_CLASSIFICATION='{"department":"IT","confidence":0.95,"rationale":"Dev mode"}'
+    export TRIRESOLVE_CANNED_REPLY='DEV: we will handle this shortly.'
+
+    nohup python -m uvicorn backend.api.main:app --host 0.0.0.0 --port 8000 > uvicorn.log 2>&1 & echo $! > uvicorn.pid
+    tail -f uvicorn.log
+    ```
+
+- **Run tests (including dev-mode tests):**
+
+    ```bash
+    pytest -q
+    ```
+
+This makes it easy to iterate on frontend and orchestration code without
+requiring access to Azure OpenAI during initial development.
+
+---
+
 # 🛡️ Responsible AI & Safety
 TriResolve AI was developed using strong Responsible AI principles to ensure safety, security, compliance, and ethical automation.
 
