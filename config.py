@@ -1,5 +1,6 @@
 import os
 from functools import lru_cache
+import os
 
 
 def _load_streamlit_secrets():
@@ -28,6 +29,54 @@ class Settings:
 
     def __init__(self) -> None:
         self._secrets = _load_streamlit_secrets()
+
+    # Simple DEV_MODE flag for local testing (can be used to short-circuit
+    # Azure OpenAI calls). Honor environment variable `TRIRESOLVE_DEV_MODE`.
+    @property
+    def DEV_MODE(self) -> bool:
+        val = os.getenv("TRIRESOLVE_DEV_MODE", "false")
+        return val.lower() in ("1", "true", "yes")
+
+    # Convenience Azure env accessors (kept for compatibility/testing).
+    @property
+    def AZURE_OPENAI_API_KEY(self) -> str | None:
+        return self._get("azure", "AZURE_OPENAI_API_KEY")
+
+    @property
+    def AZURE_OPENAI_ENDPOINT(self) -> str | None:
+        return self._get("azure", "AZURE_OPENAI_ENDPOINT")
+
+    @property
+    def AZURE_OPENAI_API_VERSION(self) -> str:
+        return self._get("azure", "AZURE_OPENAI_API_VERSION", "2024-02-15-preview") or "2024-02-15-preview"
+
+    # ------------------------------------------------------------------
+    # Dev mode toggle + convenience Azure env getters
+    # ------------------------------------------------------------------
+    @property
+    def DEV_MODE(self) -> bool:
+        """If true, the application should use local canned responses instead
+        of calling Azure OpenAI. Respects the `TRIRESOLVE_DEV_MODE` env var.
+        """
+        val = os.getenv("TRIRESOLVE_DEV_MODE")
+        if val is None:
+            # Also allow reading from Streamlit secrets if present
+            if self._secrets is not None and "TRIRESOLVE_DEV_MODE" in self._secrets:
+                return str(self._secrets["TRIRESOLVE_DEV_MODE"]).lower() in ("1", "true", "yes")
+            return False
+        return str(val).lower() in ("1", "true", "yes")
+
+    @property
+    def AZURE_OPENAI_API_KEY(self) -> str | None:
+        return os.getenv("AZURE_OPENAI_API_KEY")
+
+    @property
+    def AZURE_OPENAI_ENDPOINT(self) -> str | None:
+        return os.getenv("AZURE_OPENAI_ENDPOINT")
+
+    @property
+    def AZURE_OPENAI_API_VERSION(self) -> str:
+        return os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
 
     # ------------------------------------------------------------------
     # Internal helpers
