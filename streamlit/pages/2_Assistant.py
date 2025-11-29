@@ -30,6 +30,8 @@ st.markdown("<p class='section-label'>Choose a department (optional)</p>", unsaf
 if "selected_domain" not in st.session_state:
     st.session_state.selected_domain = "Auto"
 
+# Shared styles
+inject_base_css()
 
 def agent_button(label: str, domain: str, key: str) -> None:
     """Render a department selection button."""
