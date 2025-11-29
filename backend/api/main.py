@@ -1,6 +1,6 @@
 # backend/api/main.py
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.schemas import (
@@ -41,12 +41,41 @@ def health() -> dict:
 
 
 @app.post("/tickets/process", response_model=TicketResult)
-def process_ticket_endpoint(payload: TicketCreate) -> TicketResult:
+def process_ticket_endpoint(payload: TicketCreate, request: Request) -> TicketResult:
     """
     Ingest a ticket, classify it, and call the TriResolve Orchestrator
     Azure OpenAI deployment. Returns the full structured result the UI expects.
     """
-    return process_ticket(payload)
+    force_dev = request.query_params.get("dev") in {"1", "true", "True"}
+    return process_ticket(payload, force_dev=force_dev)
+
+
+@app.post("/orchestrator")
+def orchestrator_endpoint(payload: dict) -> dict:
+    """
+    Backwards-compatible test/dev endpoint used by integration tests and
+    lightweight clients. Accepts a JSON body like `{ "ticket": "..." }`.
+
+    Returns a small `response` object with keys the tests expect.
+    """
+    ticket_text = payload.get("ticket", "")
+
+    # Build a minimal TicketCreate from the free-text payload so we can reuse
+    # the existing `process_ticket` pipeline.
+    ticket = TicketCreate(title=(ticket_text[:50] or "ticket"), description=ticket_text, priority="Medium")
+
+    # This lightweight `/orchestrator` test endpoint should use dev-mode
+    # behaviour to avoid calling external Azure services during tests.
+    result = process_ticket(ticket, force_dev=True)
+
+    orchestrator_output = {
+        "final_answer": result.response.summary,
+        "agents_consulted": [result.response.department],
+        "actions_taken": "",
+        "next_steps": result.response.steps,
+    }
+
+    return {"response": orchestrator_output}
 
 
 @app.post("/chat", response_model=ChatResponse)

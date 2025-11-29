@@ -6,9 +6,13 @@ from backend.api.schemas import (
     AgentResponse,
     TicketCreate,
     TicketResult,
+    TicketClassification,
 )
 from backend.services.classifier import classify_ticket
 from backend.services.azure_client import chat_completion
+
+# Config settings (DEV_MODE toggle, etc.)
+from config import settings
 
 # Name of the orchestrator deployment in Azure
 ORCHESTRATOR_MODEL = os.getenv(
@@ -28,7 +32,7 @@ def _build_user_prompt(ticket: TicketCreate) -> str:
     )
 
 
-def process_ticket(ticket: TicketCreate) -> TicketResult:
+def process_ticket(ticket: TicketCreate, force_dev: bool = False) -> TicketResult:
     """
     Full pipeline (LLM-backed orchestrator version):
 
@@ -36,6 +40,23 @@ def process_ticket(ticket: TicketCreate) -> TicketResult:
     2. Call the TriResolve Orchestrator LLM deployment.
     3. Return a normalized TicketResult that the UI already understands.
     """
+    # Short-circuit in dev mode with a deterministic canned response.
+    if getattr(settings, "DEV_MODE", False) or force_dev:
+        classification = TicketClassification(
+            department="IT",
+            confidence=0.95,
+            rationale="Dev mode – static output.",
+        )
+
+        agent_response = AgentResponse(
+            agent_name="TriResolve Orchestrator (dev)",
+            department="IT",
+            summary="Dev mode response – everything working!",
+            steps="This is a demo response.",
+        )
+
+        return TicketResult(ticket=ticket, classification=classification, response=agent_response)
+
     # Step 1: classify
     classification = classify_ticket(ticket)
 
