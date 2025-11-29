@@ -41,6 +41,33 @@ BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
 TICKETS_ENDPOINT = f"{BACKEND_URL}/tickets/process"
 HEALTH_ENDPOINT = f"{BACKEND_URL}/health"
 
+def fake_orchestrator_response(payload: Dict[str, Any], dept: str) -> Dict[str, Any]:
+    """Local canned response used when running in dev/demo mode."""
+    if dept == "Auto":
+        dept = "IT"  # default for demo
+
+    summary = payload.get("description", "")[:80] + "..."
+    return {
+        "classification": {
+            "department": dept,
+            "confidence": 0.92,
+            "rationale": (
+                "Dev mode: this is a canned classification for demo purposes. "
+                "In live mode, the TriNexa classifier would score and route this."
+            ),
+        },
+        "response": {
+            "agent_name": f"{dept} Agent",
+            "department": dept,
+            "summary": f"Dev-mode response for {dept} – showing the orchestration UI.",
+            "steps": (
+                "- This is a simulated response because the backend is not running.\n"
+                "- In the real system, the orchestrator would call the {dept} agent.\n"
+                "- Use this screen to demo the workflow and UI to judges.\n"
+            ),
+        },
+    }
+
 
 def submit_ticket(payload: Dict[str, Any]) -> Dict[str, Any]:
     """Call the FastAPI tickets endpoint."""
@@ -189,38 +216,25 @@ with col_result:
     st.markdown("### Orchestrator Response")
 
     if not submit:
-        # Nice empty-state message
-        st.info("Submit a ticket on the left to see the orchestrator in action.")
+        ...
     else:
-        if not title or not description:
-            st.warning("Please provide both a **summary** and **details**.")
-        else:
-            full_description = description
-            if st.session_state.selected_domain != "Auto":
-                full_description = (
-                    f"[Preferred department: {st.session_state.selected_domain}] "
-                    + description
-                )
-
+        ...
             payload: Dict[str, Any] = {
-                "title": title,
-                "description": full_description,
-                "priority": priority,
-                # Let the backend know if we're forcing dev-mode
-                "dev_mode": effective_dev_mode,
+                ...
             }
 
-            with st.spinner("Asking TriNexa and domain agents..."):
-                data = submit_ticket(payload)
+            url = f"{BACKEND_URL}/tickets/process"
 
-                if data.get("error"):
-                    st.error(
-                        f"Error contacting backend at `{TICKETS_ENDPOINT}`. "
-                        f"Check that FastAPI is running.\n\n{data.get('error')}"
+                        with st.spinner("Asking TriNexa and domain agents..."):
+                # If we're in dev mode OR the backend health check failed,
+                # skip FastAPI entirely and use a canned response.
+                if effective_dev_mode or health is None:
+                    data = fake_orchestrator_response(
+                        payload,
+                        st.session_state.selected_domain,
                     )
                 else:
-                    clf = data.get("classification", {}) or {}
-                    agent = data.get("response", {}) or {}
+                    data = submit_ticket(payload)
 
                     # ---------------- Classification card ----------------
                     st.markdown(
@@ -260,4 +274,5 @@ with col_result:
 
                     with st.expander("Raw response (debug)"):
                         st.json(data)
+
 
