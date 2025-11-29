@@ -115,7 +115,6 @@ with col_result:
                         f"Check that FastAPI is running.\n\n{exc}"
                     )
                 else:
-                    ticket = data.get("ticket", {})
                     clf = data.get("classification", {})
                     agent = data.get("response", {})
 
