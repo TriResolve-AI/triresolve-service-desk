@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Dict
+from pathlib import Path
+import os
 import sys
 
 import requests
@@ -30,6 +32,27 @@ except Exception:
     }
 
 from config import settings  # now safe because sys.path is fixed
+
+# Ensure repo root is on sys.path so imports resolve when Streamlit runs
+# from a nested mount. Go up two parents to reach the workspace root.
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.append(str(ROOT))
+
+# --- Backend configuration ---------------------------------------------------
+# Read the backend URL from env so it works on Streamlit Cloud
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
+
+TICKETS_ENDPOINT = f"{BACKEND_URL}/tickets/process"
+HEALTH_ENDPOINT = f"{BACKEND_URL}/health"
+
+
+def submit_ticket(payload: Dict[str, Any]) -> Dict[str, Any]:
+    try:
+        resp = requests.post(TICKETS_ENDPOINT, json=payload, timeout=10)
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as exc:
+        return {"error": str(exc)}
 
 # Shared styles
 inject_base_css()
@@ -193,14 +216,12 @@ with col_result:
             url = f"{BACKEND_URL}/tickets/process"
 
             with st.spinner("Asking TriNexa and domain agents..."):
-                try:
-                    resp = requests.post(url, json=payload, timeout=45)
-                    resp.raise_for_status()
-                    data = resp.json()
-                except Exception as exc:  # noqa: BLE001
+                data = submit_ticket(payload)
+
+                if data.get("error"):
                     st.error(
-                        f"Error contacting backend at `{url}`. "
-                        f"Check that FastAPI is running and reachable.\n\n{exc}"
+                        f"Error contacting backend at `{TICKETS_ENDPOINT}`. "
+                        f"Check that FastAPI is running.\n\n{data.get('error')}"
                     )
                 else:
                     clf = data.get("classification", {}) or {}
