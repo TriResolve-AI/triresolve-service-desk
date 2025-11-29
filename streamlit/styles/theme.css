@@ -3,18 +3,19 @@
    ------------------------------------------------------------------ */
 
 /* Brand tokens */
+/* Brand tokens – synced with Maps chart palette */
 :root {
-  --tri-deep-blue: #00547D;
-  --tri-teal: #1FB7A6;
-  --tri-gold: #F3B147;
-  --tri-coral: #F2654C;
-  --tri-cream: #FFF7E8;
-  --tri-ink: #121826;
+  --tri-deep-blue: #227C9D;  /* Auto / main blue */
+  --tri-teal:      #17C3B2;  /* Finance */
+  --tri-gold:      #FFCB77;  /* HR */
+  --tri-coral:     #FE6D73;  /* IT */
+  --tri-cream:     #FEF9EF;  /* App background */
+  --tri-ink:       #121826;
 
   --tri-radius-pill: 999px;
   --tri-radius-card: 16px;
 
-  --tri-shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.06);
+  --tri-shadow-soft:   0 18px 45px rgba(0, 0, 0, 0.06);
   --tri-shadow-subtle: 0 4px 14px rgba(0, 0, 0, 0.05);
 }
 
@@ -39,9 +40,8 @@
 
 /* ------------------------------------------------------------------
    Department buttons (Auto / IT / HR / Finance)
-   Scoped to the assistant's department strip using the `#dept-buttons`
-   container and Streamlit's `data-testid` attributes for buttons/cols.
    ------------------------------------------------------------------ */
+#dept-buttons .stButton > button,
 #dept-buttons [data-testid="stButton"] button {
   border-radius: 999px;
   font-weight: 500;
@@ -52,27 +52,29 @@
 
 /* Auto = deep blue */
 #dept-buttons div[data-testid="column"]:nth-child(1) button {
-  background-color: var(--tri-deep-blue);
+  background-color: var(--tri-deep-blue) !important;
 }
 
 /* IT = coral (red-ish) */
 #dept-buttons div[data-testid="column"]:nth-child(2) button {
-  background-color: var(--tri-coral);
+  background-color: var(--tri-coral) !important;
 }
 
 /* HR = gold (yellow) */
 #dept-buttons div[data-testid="column"]:nth-child(3) button {
-  background-color: var(--tri-gold);
+  background-color: var(--tri-gold) !important;
 }
 
 /* Finance = teal (green-ish) */
 #dept-buttons div[data-testid="column"]:nth-child(4) button {
-  background-color: var(--tri-teal);
+  background-color: var(--tri-teal) !important;
 }
 
+#dept-buttons .stButton > button:hover,
 #dept-buttons [data-testid="stButton"] button:hover {
   filter: brightness(1.05);
 }
+
 /* ------------------------------------------------------------------
    TriResolveAI Global Theme
    ------------------------------------------------------------------ */
@@ -239,3 +241,4 @@ section[data-testid="stSidebar"] .stMarkdown p {
 [data-baseweb="tab-list"] > div[aria-selected="true"] {
   border-color: var(--tri-deep-blue) !important;
 }
+
