@@ -2,11 +2,12 @@
 TriResolveAI Streamlit theme helpers.
 
 - PALETTE: single source of truth for brand colors
+- DEPT_COLORS: per-department accent colors
 - inject_base_css(): loads styles/theme.css and injects it into the app
 
 Usage in a page:
 
-    from theme import PALETTE, inject_base_css
+    from theme import PALETTE, DEPT_COLORS, inject_base_css
 
     inject_base_css()
     # now build your Streamlit layout
@@ -21,12 +22,27 @@ import streamlit as st
 # --- Brand Palette (Final TriResolveAI) --------------------------------------
 
 PALETTE = {
+    # Core brand colors
     "deep_blue": "#00547D",   # Primary blue (logo top)
     "teal": "#1FB7A6",        # Teal loop
     "gold": "#F3B147",        # Gold loop
     "coral": "#F2654C",       # Coral loop
     "cream": "#FFF7E8",       # Soft background
     "ink": "#121826",         # Primary text
+
+    # Backwards-compat aliases used in earlier Streamlit pages
+    "primary_blue": "#00547D",  # alias for deep_blue
+    "green": "#1FB7A6",         # alias for teal
+    "yellow": "#F3B147",        # alias for gold
+    "red": "#F2654C",           # alias for coral
+}
+
+# Department-specific colors (used in Assistant + Maps)
+DEPT_COLORS = {
+    "IT": PALETTE["red"],            # Coral / red for IT incidents
+    "HR": PALETTE["yellow"],         # Gold / yellow for people ops
+    "Finance": PALETTE["green"],     # Teal / green for money
+    "Auto": PALETTE["primary_blue"], # Default / auto routing
 }
 
 
