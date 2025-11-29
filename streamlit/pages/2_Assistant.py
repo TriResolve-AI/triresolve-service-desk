@@ -27,44 +27,19 @@ st.write(
 
 st.markdown("<p class='section-label'>Choose a department (optional)</p>", unsafe_allow_html=True)
 
-AGENT_COLORS = {
-    "IT": DEPT_COLORS["IT"],
-    "HR": DEPT_COLORS["HR"],
-    "Finance": DEPT_COLORS["Finance"],
-}
-
 if "selected_domain" not in st.session_state:
     st.session_state.selected_domain = "Auto"
 
+# Shared styles
+inject_base_css()
 
-def agent_button(label: str, domain: str, color: str, key: str) -> None:
+def agent_button(label: str, domain: str, key: str) -> None:
+    """Render a department selection button."""
     is_selected = st.session_state.selected_domain == domain
-    bg = f"{color}22" if is_selected else f"{color}18"
-    border = color if is_selected else f"{color}55"
-
-    button_html = f"""
-        <button style="
-            width: 100%;
-            border-radius: 18px;
-            padding: 0.9rem 1.1rem;
-            background: {bg};
-            border: 2px solid {border};
-            color: #0F172A;
-            font-weight: 600;
-            letter-spacing: 0.03em;
-            text-transform: uppercase;
-            cursor: pointer;
-        ">{label}</button>
-    """
-
-    if st.button(label, key=key, use_container_width=True):
+    # Use st.button for functionality with CSS-based styling
+    if st.button(label, key=key, use_container_width=True, type="secondary" if not is_selected else "primary"):
         st.session_state.selected_domain = domain
-
-    # Override default button styling using markdown (visual only)
-    st.markdown(
-        f"<div style='margin-top:-3rem; visibility:hidden;'>x</div>{button_html}",
-        unsafe_allow_html=True,
-    )
+        st.rerun()
 
 
 c1, c2, c3, c4 = st.columns(4)
@@ -75,13 +50,13 @@ with c1:
     st.caption("Let TriNexa pick the best agent.")
 
 with c2:
-    agent_button("IT Agent", "IT", AGENT_COLORS["IT"], "btn_it")
+    agent_button("IT Agent", "IT", "btn_it")
 
 with c3:
-    agent_button("HR Agent", "HR", AGENT_COLORS["HR"], "btn_hr")
+    agent_button("HR Agent", "HR", "btn_hr")
 
 with c4:
-    agent_button("Finance Agent", "Finance", AGENT_COLORS["Finance"], "btn_fin")
+    agent_button("Finance Agent", "Finance", "btn_fin")
 
 
 st.markdown("---")
@@ -106,6 +81,7 @@ with col_form:
 
 with col_result:
     st.markdown("### Orchestrator Response")
+
     if submit:
         if not title or not description:
             st.warning("Please provide both a **summary** and **details**.")
@@ -142,42 +118,41 @@ with col_result:
                     clf = data.get("classification", {})
                     agent = data.get("response", {})
 
-                    with result_placeholder:
-                        # Classification card
-                        st.markdown(
-                            f"""
-                            <div class="tr-card" style="border-left: 4px solid {PALETTE['primary_blue']}">
-                                <strong>Classification</strong><br/>
-                                Department: <b>{clf.get('department', '—')}</b><br/>
-                                Confidence: {clf.get('confidence', '—')}<br/>
-                                <span style="font-size:0.85rem; opacity:0.9;">
-                                {clf.get('rationale', '')}
-                                </span>
-                            </div>
-                            """,
-                            unsafe_allow_html=True,
-                        )
-                        st.markdown("")
+                    # Classification card
+                    st.markdown(
+                        f"""
+                        <div class="tr-card" style="border-left: 4px solid {PALETTE['primary_blue']}">
+                            <strong>Classification</strong><br/>
+                            Department: <b>{clf.get('department', '—')}</b><br/>
+                            Confidence: {clf.get('confidence', '—')}<br/>
+                            <span style="font-size:0.85rem; opacity:0.9;">
+                            {clf.get('rationale', '')}
+                            </span>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    st.markdown("")
 
-                        # Agent response card
-                        dept = agent.get("department", "—")
-                        dept_color = DEPT_COLORS.get(dept, PALETTE["primary_blue"])
+                    # Agent response card
+                    dept = agent.get("department", "—")
+                    dept_color = DEPT_COLORS.get(dept, PALETTE["primary_blue"])
 
-                        st.markdown(
-                            f"""
-                            <div class="tr-card" style="border-left: 4px solid {dept_color}">
-                                <strong>Agent:</strong> {agent.get('agent_name', 'TriResolve Agent')}<br/>
-                                <strong>Department:</strong> {dept}<br/><br/>
-                                <strong>Summary</strong><br/>
-                                {agent.get('summary', '—')}<br/><br/>
-                                <strong>Recommended steps</strong><br/>
-                                <pre style="white-space:pre-wrap; font-size:0.85rem;">
+                    st.markdown(
+                        f"""
+                        <div class="tr-card" style="border-left: 4px solid {dept_color}">
+                            <strong>Agent:</strong> {agent.get('agent_name', 'TriResolve Agent')}<br/>
+                            <strong>Department:</strong> {dept}<br/><br/>
+                            <strong>Summary</strong><br/>
+                            {agent.get('summary', '—')}<br/><br/>
+                            <strong>Recommended steps</strong><br/>
+                            <pre style="white-space:pre-wrap; font-size:0.85rem;">
 {agent.get('steps', '').strip()}
-                                </pre>
-                            </div>
-                            """,
-                            unsafe_allow_html=True,
-                        )
+                            </pre>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
 
-                        with st.expander("Raw response (debug)"):
-                            st.json(data)
+                    with st.expander("Raw response (debug)"):
+                        st.json(data)
