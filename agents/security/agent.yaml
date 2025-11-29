@@ -1,29 +1,32 @@
-id: trinexa-security-agent
-display_name: TriNexa Security Agent
+id: triresolve-security
+display_name: TriResolve Security Agent
 description: >
-  Evaluates security, privacy, and compliance risk and recommends controls.
+  Evaluates requests, workflows, and plans for security, privacy,
+  and compliance risks. Provides clear guidance and required controls.
 
 model:
   deployment_env_var: AZURE_OPENAI_DEPLOYMENT_SECURITY
   temperature: 0.3
-  max_output_tokens: 2048
+  top_p: 1.0
+  max_output_tokens: 3072
 
 instructions:
   file: agent.md
 
 capabilities:
   - risk_assessment
-  - policy_check
-  - compliance_guidance
+  - compliance_analysis
+  - policy_lookup
+  - escalation_recommendation
 
-tools:
-  - name: security_policies
-    type: search
-    description: "Lookup security, privacy, and compliance policies or standards."
+downstream_tools: []
+upstream_agents: []
+
+response_format: json
 
 tags:
   - agent
   - security
-  - governance
+  - compliance
+  - risk
   - triresolve
-  - trinexa
