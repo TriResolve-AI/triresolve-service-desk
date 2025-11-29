@@ -3,15 +3,13 @@ TriResolveAI Streamlit theme helpers.
 
 - PALETTE: single source of truth for brand colors
 - DEPT_COLORS: per-department accent colors
-- inject_base_css(): loads styles/theme.css and injects it into the app
+- inject_base_css(): loads styles/theme.css AND injects
+  department button overrides used in Assistant
 
-Usage in a page:
+Usage:
 
     from theme import PALETTE, DEPT_COLORS, inject_base_css
-
     inject_base_css()
-    # now build your Streamlit layout
-
 """
 
 from __future__ import annotations
@@ -19,53 +17,54 @@ from __future__ import annotations
 from pathlib import Path
 import streamlit as st
 
-# --- Brand Palette (Final TriResolveAI) --------------------------------------
-
+# -----------------------------------------------------------------------------
+# Brand Palette (Final TriResolveAI)
+# -----------------------------------------------------------------------------
 PALETTE = {
-    # Core brand colors
-    "deep_blue": "#00547D",   # Primary blue (logo top)
-    "teal": "#1FB7A6",        # Teal loop
-    "gold": "#F3B147",        # Gold loop
-    "coral": "#F2654C",       # Coral loop
-    "cream": "#FFF7E8",       # Soft background
-    "ink": "#121826",         # Primary text
+    "deep_blue": "#00547D",   # Primary blue
+    "teal": "#1FB7A6",        # Finance / teal
+    "gold": "#F3B147",        # HR / gold
+    "coral": "#F2654C",       # IT / coral/red
+    "cream": "#FFF7E8",       # App background
+    "ink": "#121826",         # Main text
 
-    # Backwards-compat aliases used in earlier Streamlit pages
-    "primary_blue": "#00547D",  # alias for deep_blue
-    "green": "#1FB7A6",         # alias for teal
-    "yellow": "#F3B147",        # alias for gold
-    "red": "#F2654C",           # alias for coral
+    # Back-compat aliases
+    "primary_blue": "#00547D",
+    "green": "#1FB7A6",
+    "yellow": "#F3B147",
+    "red": "#F2654C",
 }
 
-# Department-specific colors (used in Assistant + Maps)
+# -----------------------------------------------------------------------------
+# Department-specific colors
+# -----------------------------------------------------------------------------
 DEPT_COLORS = {
-    "IT": PALETTE["red"],            # Coral / red for IT incidents
-    "HR": PALETTE["yellow"],         # Gold / yellow for people ops
-    "Finance": PALETTE["green"],     # Teal / green for money
-    "Auto": PALETTE["primary_blue"], # Default / auto routing
+    "IT": PALETTE["red"],            # Coral / red
+    "HR": PALETTE["yellow"],         # Gold / yellow
+    "Finance": PALETTE["green"],     # Teal / green
+    "Auto": PALETTE["primary_blue"], # Default
 }
 
-
+# -----------------------------------------------------------------------------
+# Theme CSS Loader
+# -----------------------------------------------------------------------------
 def _theme_css_path() -> Path:
-    """Return the path to the base CSS file."""
     return Path(__file__).parent / "styles" / "theme.css"
 
 
 def inject_base_css() -> None:
     """
-    Inject the shared TriResolveAI theme CSS.
-
-    This:
-    - sets global background / text colors
-    - styles sidebar, buttons, and basic cards
-    - defines utility classes used across pages
+    Inject:
+    - Base theme.css (colors, typography, cards, sidebar)
+    - Department button CSS overrides (Auto / IT / HR / Finance)
     """
     css_path = _theme_css_path()
 
+    # Load external CSS if exists
     if css_path.exists():
         css = css_path.read_text(encoding="utf-8")
     else:
-        # Very small fallback so the app is still readable
+        # Minimal fallback
         css = f"""
         :root {{
             --tri-deep-blue: {PALETTE["deep_blue"]};
@@ -82,4 +81,61 @@ def inject_base_css() -> None:
         }}
         """
 
+    # -------------------------------------------------------------------------
+    # Custom department button overrides (your block)
+    # -------------------------------------------------------------------------
+    dept_button_css = f"""
+    <style>
+    /* Shared pill shape */
+    #dept-buttons .stButton>button {{
+        border-radius: 30px;
+        padding: 0.55rem 1.2rem;
+        font-weight: 600;
+        border: none;
+    }}
+
+    /* AUTO */
+    button[kind="primary"][id="btn_auto"] {{
+        background-color: {PALETTE['deep_blue']} !important;
+        color: white !important;
+    }}
+    button[id="btn_auto"] {{
+        background-color: rgba(0,84,125,0.15) !important;
+        color: {PALETTE['deep_blue']} !important;
+    }}
+
+    /* IT */
+    button[kind="primary"][id="btn_it"] {{
+        background-color: {PALETTE['coral']} !important;
+        color: white !important;
+    }}
+    button[id="btn_it"] {{
+        background-color: rgba(242,101,76,0.18) !important;
+        color: {PALETTE['coral']} !important;
+    }}
+
+    /* HR */
+    button[kind="primary"][id="btn_hr"] {{
+        background-color: {PALETTE['gold']} !important;
+        color: black !important;
+    }}
+    button[id="btn_hr"] {{
+        background-color: rgba(243,177,71,0.22) !important;
+        color: #8a6500 !important;
+    }}
+
+    /* FINANCE */
+    button[kind="primary"][id="btn_finance"] {{
+        background-color: {PALETTE['teal']} !important;
+        color: white !important;
+    }}
+    button[id="btn_finance"] {{
+        background-color: rgba(31,183,166,0.18) !important;
+        color: {PALETTE['teal']} !important;
+    }}
+    </style>
+    """
+
+    # Inject both theme.css + dynamic button CSS
     st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+    st.markdown(dept_button_css, unsafe_allow_html=True)
