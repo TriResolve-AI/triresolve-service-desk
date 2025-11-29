@@ -18,6 +18,81 @@
   --tri-shadow-subtle: 0 4px 14px rgba(0, 0, 0, 0.05);
 }
 
+/* TriResolve banner styles (live / dev indicators) */
+.tri-banner {
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.85rem;
+  margin: 0.35rem 0 0.75rem 0;
+}
+
+.tri-banner-live {
+  background-color: var(--tri-teal);
+  color: #ffffff;
+}
+
+.tri-banner-dev {
+  background-color: #fce7d8; /* soft coral tint */
+  color: var(--tri-ink);
+  border: 1px dashed var(--tri-coral);
+}
+
+/* ------------------------------------------------------------------
+   Department buttons (Auto / IT / HR / Finance)
+   Scoped to the assistant's department strip using the `#dept-buttons`
+   container and Streamlit's `data-testid` attributes for buttons/cols.
+   ------------------------------------------------------------------ */
+#dept-buttons [data-testid="stButton"] button {
+  border-radius: 999px;
+  font-weight: 500;
+  border: none;
+  color: #ffffff;
+  padding: 0.4rem 0.8rem;
+}
+
+/* Auto = deep blue */
+#dept-buttons div[data-testid="column"]:nth-child(1) button {
+  background-color: var(--tri-deep-blue);
+}
+
+/* IT = coral (red-ish) */
+#dept-buttons div[data-testid="column"]:nth-child(2) button {
+  background-color: var(--tri-coral);
+}
+
+/* HR = gold (yellow) */
+#dept-buttons div[data-testid="column"]:nth-child(3) button {
+  background-color: var(--tri-gold);
+}
+
+/* Finance = teal (green-ish) */
+#dept-buttons div[data-testid="column"]:nth-child(4) button {
+  background-color: var(--tri-teal);
+}
+
+#dept-buttons [data-testid="stButton"] button:hover {
+  filter: brightness(1.05);
+}
+/* ------------------------------------------------------------------
+   TriResolveAI Global Theme
+   ------------------------------------------------------------------ */
+
+/* Brand tokens */
+:root {
+  --tri-deep-blue: #00547D;
+  --tri-teal: #1FB7A6;
+  --tri-gold: #F3B147;
+  --tri-coral: #F2654C;
+  --tri-cream: #FFF7E8;
+  --tri-ink: #121826;
+
+  --tri-radius-pill: 999px;
+  --tri-radius-card: 16px;
+
+  --tri-shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.06);
+  --tri-shadow-subtle: 0 4px 14px rgba(0, 0, 0, 0.05);
+}
+
 /* Base layout */
 html,
 body,
