@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Dict
-from pathlib import Path
+import os
 import sys
 
 import requests
 import streamlit as st
 
 # ---------------------------------------------------------------------
-# Make sure the repo root is on sys.path so we can import config, etc.
+# Ensure repo root is on sys.path (for theme imports, etc.)
 # ---------------------------------------------------------------------
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -19,6 +19,9 @@ if str(ROOT) not in sys.path:
 
 from theme import PALETTE, inject_base_css  # DEPT_COLORS comes via fallback below
 
+# ---------------------------------------------------------------------
+# Department colors (match Maps page intent)
+# ---------------------------------------------------------------------
 try:
     # If DEPT_COLORS is defined in theme.py, use it
     from theme import DEPT_COLORS  # type: ignore
@@ -30,15 +33,9 @@ except Exception:
         "Finance": PALETTE["teal"],  # Finance = teal / green-ish
     }
 
-from config import settings  # now safe because sys.path is fixed
-
-# Ensure repo root is on sys.path so imports resolve when Streamlit runs
-# from a nested mount. Go up two parents to reach the workspace root.
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.append(str(ROOT))
-
-# --- Backend configuration ---------------------------------------------------
-# Read the backend URL from env so it works on Streamlit Cloud
+# ---------------------------------------------------------------------
+# Backend configuration (env only – works on Streamlit Cloud)
+# ---------------------------------------------------------------------
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
 
 TICKETS_ENDPOINT = f"{BACKEND_URL}/tickets/process"
@@ -46,6 +43,7 @@ HEALTH_ENDPOINT = f"{BACKEND_URL}/health"
 
 
 def submit_ticket(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Call the FastAPI tickets endpoint."""
     try:
         resp = requests.post(TICKETS_ENDPOINT, json=payload, timeout=10)
         resp.raise_for_status()
@@ -53,15 +51,6 @@ def submit_ticket(payload: Dict[str, Any]) -> Dict[str, Any]:
     except Exception as exc:
         return {"error": str(exc)}
 
-# Ensure repo root is on sys.path so `from config import settings` resolves
-# when Streamlit runs from a nested mount. Go up two parents to reach
-# the workspace root (`/mount/src/triresolve-service-desk`).
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.append(str(ROOT))
-
-# Note: `config` may not be available in all environments; any backend URL
-# is read from environment variables at submit time instead of relying on
-# `settings` here.
 
 # Shared styles
 inject_base_css()
@@ -80,9 +69,8 @@ st.write(
 )
 
 # ---------------------------------------------------------------------
-# Backend config + health / dev-mode detection
+# Backend health / dev-mode detection
 # ---------------------------------------------------------------------
-BACKEND_URL = settings._get("backend", "BACKEND_URL", "http://localhost:8000").rstrip("/")
 
 
 @st.cache_data(ttl=30)
@@ -152,7 +140,7 @@ with col_status:
 effective_dev_mode = backend_dev_mode or st.session_state.force_dev_mode
 
 # ---------------------------------------------------------------------
-# Department selection buttons – will be styled via CSS to match Maps
+# Department selection buttons – styled via CSS to match Maps
 # ---------------------------------------------------------------------
 st.markdown("<p class='section-label'>Choose a department (optional)</p>", unsafe_allow_html=True)
 st.markdown("<div id='dept-buttons'>", unsafe_allow_html=True)
@@ -207,12 +195,6 @@ with col_result:
         if not title or not description:
             st.warning("Please provide both a **summary** and **details**.")
         else:
-            import os
-
-            # Read backend URL from env (or default to local FastAPI)
-            backend_url = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
-            url = f"{backend_url}/tickets/process"
-
             full_description = description
             if st.session_state.selected_domain != "Auto":
                 full_description = (
@@ -227,8 +209,6 @@ with col_result:
                 # Let the backend know if we're forcing dev-mode
                 "dev_mode": effective_dev_mode,
             }
-
-            url = f"{BACKEND_URL}/tickets/process"
 
             with st.spinner("Asking TriNexa and domain agents..."):
                 data = submit_ticket(payload)
