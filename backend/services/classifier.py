@@ -32,7 +32,12 @@ Description: {ticket.description}
 Priority: {ticket.priority}
 """
 
-    raw = chat_completion(SYSTEM_PROMPT, user_prompt)
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": user_prompt},
+    ]
+
+    raw = chat_completion(messages)
 
     # Be defensive in case the model adds extra prose
     start = raw.find("{")
