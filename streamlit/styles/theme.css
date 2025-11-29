@@ -1,12 +1,166 @@
-/* streamlit/styles/theme.css */
-/* Optional: reference colors here if you ever want to use st.markdown to load it */
+/* ------------------------------------------------------------------
+   TriResolveAI Global Theme
+   ------------------------------------------------------------------ */
 
+/* Brand tokens */
 :root {
-  --tri-primary-blue: #005B8F;
-  --tri-teal: #2EB7A5;
-  --tri-gold: #F4B23E;
-  --tri-coral: #E8654F;
-  --tri-cream: #F5F1E5;
-  --tri-sky-top: #227C9D;
-  --tri-sky-bottom: #F2EDE2;
+  --tri-deep-blue: #00547D;
+  --tri-teal: #1FB7A6;
+  --tri-gold: #F3B147;
+  --tri-coral: #F2654C;
+  --tri-cream: #FFF7E8;
+  --tri-ink: #121826;
+
+  --tri-radius-pill: 999px;
+  --tri-radius-card: 16px;
+
+  --tri-shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.06);
+  --tri-shadow-subtle: 0 4px 14px rgba(0, 0, 0, 0.05);
+}
+
+/* Base layout */
+html,
+body,
+.stApp {
+  background: var(--tri-cream);
+  color: var(--tri-ink);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--tri-deep-blue);
+  letter-spacing: 0.02em;
+}
+
+p, li, span, label {
+  color: var(--tri-ink);
+}
+
+/* Links */
+a, a:visited {
+  color: var(--tri-deep-blue);
+}
+a:hover {
+  color: var(--tri-teal);
+}
+
+/* Sidebar gradient + text */
+section[data-testid="stSidebar"] {
+  background: linear-gradient(
+    180deg,
+    var(--tri-deep-blue) 0%,
+    var(--tri-teal) 100%
+  );
+  color: #ffffff;
+}
+
+section[data-testid="stSidebar"] * {
+  color: #ffffff !important;
+}
+
+/* Make the sidebar radio / nav labels readable */
+section[data-testid="stSidebar"] .stRadio label,
+section[data-testid="stSidebar"] .stMarkdown p {
+  font-weight: 500;
+}
+
+/* Global buttons */
+.stButton > button {
+  border-radius: var(--tri-radius-pill);
+  border: none;
+  padding: 0.55rem 1.5rem;
+  font-weight: 600;
+  background: var(--tri-deep-blue);
+  color: #ffffff;
+  box-shadow: var(--tri-shadow-subtle);
+  transition: background 0.18s ease, transform 0.12s ease,
+    box-shadow 0.18s ease;
+}
+
+.stButton > button:hover {
+  background: #003a56;
+  transform: translateY(-1px);
+  box-shadow: var(--tri-shadow-soft);
+}
+
+/* Select boxes, text inputs, textareas */
+.stTextInput > div > div > input,
+.stTextArea textarea,
+.stSelectbox > div > div {
+  border-radius: 10px !important;
+}
+
+/* Generic "surface" card used by multiple pages */
+.tri-surface {
+  background: #ffffff;
+  border-radius: var(--tri-radius-card);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--tri-shadow-soft);
+}
+
+/* Small pill label / chip */
+.tri-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.22rem 0.75rem;
+  border-radius: var(--tri-radius-pill);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  background: rgba(0, 84, 125, 0.06);
+  color: var(--tri-deep-blue);
+}
+
+/* Domain / agent chips */
+.tri-agent-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.9rem;
+  margin-right: 0.4rem;
+  margin-bottom: 0.4rem;
+  border-radius: var(--tri-radius-pill);
+  font-size: 0.8rem;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.03);
+}
+
+/* Intent badges for departments (can be colored per-dept) */
+.tri-chip-it {
+  border: 1px solid var(--tri-coral);
+  background: rgba(242, 101, 76, 0.08);
+  color: var(--tri-coral);
+}
+.tri-chip-hr {
+  border: 1px solid var(--tri-gold);
+  background: rgba(243, 177, 71, 0.10);
+  color: #a36b16;
+}
+.tri-chip-finance {
+  border: 1px solid var(--tri-teal);
+  background: rgba(31, 183, 166, 0.10);
+  color: #0c6b5d;
+}
+
+/* Status cards on the home/overview page */
+.tri-status-card {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 1rem 1.25rem;
+  box-shadow: var(--tri-shadow-soft);
+  border-left: 4px solid rgba(0, 84, 125, 0.25);
+}
+
+/* Toast-style subtle text */
+.tri-caption {
+  font-size: 0.78rem;
+  opacity: 0.75;
+}
+
+/* Tabs accent underline color */
+[data-baseweb="tab-list"] > div[aria-selected="true"] {
+  border-color: var(--tri-deep-blue) !important;
 }
