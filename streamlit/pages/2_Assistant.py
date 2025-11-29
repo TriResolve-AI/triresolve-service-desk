@@ -1,50 +1,46 @@
-# streamlit/pages/2_Assistant.py
-
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any, Dict
 import os
 import sys
-
+from pathlib import Path
+from typing import Any, Dict
 import requests
 import streamlit as st
 
-# ---------------------------------------------------------------------
-# Ensure repo root is on sys.path (for theme imports, etc.)
-# ---------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# Ensure repo root on path
+# -----------------------------------------------------------------------------
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
-from theme import PALETTE, inject_base_css  # DEPT_COLORS comes via fallback below
+from theme import PALETTE, inject_base_css
 
-# ---------------------------------------------------------------------
-# Department colors (match Maps page intent)
-# ---------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# Department color fallback (in case theme.DEPT_COLORS missing)
+# -----------------------------------------------------------------------------
 try:
-    # If DEPT_COLORS is defined in theme.py, use it
     from theme import DEPT_COLORS  # type: ignore
 except Exception:
-    # Fallback mapping that matches the Maps page intent
     DEPT_COLORS = {
-        "IT": PALETTE["coral"],      # IT = coral / red-ish
-        "HR": PALETTE["gold"],       # HR = gold / yellow
-        "Finance": PALETTE["teal"],  # Finance = teal / green-ish
+        "IT": PALETTE["coral"],
+        "HR": PALETTE["gold"],
+        "Finance": PALETTE["teal"],
     }
 
-# ---------------------------------------------------------------------
-# Backend configuration (env only – works on Streamlit Cloud)
-# ---------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# Backend configuration (works on Streamlit Cloud + local)
+# -----------------------------------------------------------------------------
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
-
 TICKETS_ENDPOINT = f"{BACKEND_URL}/tickets/process"
 HEALTH_ENDPOINT = f"{BACKEND_URL}/health"
 
+# -----------------------------------------------------------------------------
+# Fake response for Dev Mode
+# -----------------------------------------------------------------------------
 def fake_orchestrator_response(payload: Dict[str, Any], dept: str) -> Dict[str, Any]:
-    """Local canned response used when running in dev/demo mode."""
     if dept == "Auto":
-        dept = "IT"  # default for demo
+        dept = "IT"
 
     summary = payload.get("description", "")[:80] + "..."
     return {
@@ -52,25 +48,26 @@ def fake_orchestrator_response(payload: Dict[str, Any], dept: str) -> Dict[str, 
             "department": dept,
             "confidence": 0.92,
             "rationale": (
-                "Dev mode: this is a canned classification for demo purposes. "
-                "In live mode, the TriNexa classifier would score and route this."
+                "Dev mode: canned classification response. "
+                "In live mode, TriNexa classifier would evaluate this."
             ),
         },
         "response": {
             "agent_name": f"{dept} Agent",
             "department": dept,
-            "summary": f"Dev-mode response for {dept} – showing the orchestration UI.",
+            "summary": f"Dev-mode response for {dept}.",
             "steps": (
                 "- This is a simulated response because the backend is not running.\n"
-                "- In the real system, the orchestrator would call the {dept} agent.\n"
-                "- Use this screen to demo the workflow and UI to judges.\n"
+                f"- The orchestrator would normally invoke the {dept} agent.\n"
+                "- Use this UI to demo the workflow.\n"
             ),
         },
     }
 
-
+# -----------------------------------------------------------------------------
+# Call backend (real mode)
+# -----------------------------------------------------------------------------
 def submit_ticket(payload: Dict[str, Any]) -> Dict[str, Any]:
-    """Call the FastAPI tickets endpoint."""
     try:
         resp = requests.post(TICKETS_ENDPOINT, json=payload, timeout=10)
         resp.raise_for_status()
@@ -78,10 +75,14 @@ def submit_ticket(payload: Dict[str, Any]) -> Dict[str, Any]:
     except Exception as exc:
         return {"error": str(exc)}
 
-
+# -----------------------------------------------------------------------------
 # Shared styles
+# -----------------------------------------------------------------------------
 inject_base_css()
 
+# -----------------------------------------------------------------------------
+# UI Header
+# -----------------------------------------------------------------------------
 st.title("🧩 TriNexa Assistant")
 
 st.write(
@@ -95,51 +96,44 @@ st.write(
     """
 )
 
-# ---------------------------------------------------------------------
-# Backend health / dev-mode detection
-# ---------------------------------------------------------------------
-
-
-@st.cache_data(ttl=30)
-def get_backend_health(base_url: str) -> Dict[str, Any] | None:
-    """Ping the FastAPI /health endpoint to discover dev_mode, etc."""
+# -----------------------------------------------------------------------------
+# Backend health
+# -----------------------------------------------------------------------------
+@st.cache_data(ttl=20)
+def get_backend_health(url: str) -> Dict[str, Any] | None:
     try:
-        resp = requests.get(f"{base_url}/health", timeout=5)
-        resp.raise_for_status()
-        return resp.json()
+        r = requests.get(f"{url}/health", timeout=5)
+        r.raise_for_status()
+        return r.json()
     except Exception:
         return None
 
+health = get_backend_health(BACKEND_URL)
+backend_dev_mode = bool(health and health.get("dev_mode"))
 
-# Initialise session state
-if "selected_domain" not in st.session_state:
-    st.session_state.selected_domain = "Auto"
-
+# -----------------------------------------------------------------------------
+# Dev mode toggle
+# -----------------------------------------------------------------------------
 if "force_dev_mode" not in st.session_state:
     st.session_state.force_dev_mode = False
 
-health = get_backend_health(BACKEND_URL)
-backend_dev_mode = bool(health and health.get("dev_mode"))
-effective_dev_mode = backend_dev_mode or st.session_state.force_dev_mode
+col1, col2 = st.columns([1.2, 3])
 
-# ---------------------------------------------------------------------
-# Dev-mode banner + toggle row
-# ---------------------------------------------------------------------
-col_toggle, col_status = st.columns([1, 3])
-
-with col_toggle:
+with col1:
     st.checkbox(
-        "Force Dev Mode\n(local demo)",
+        "Force Dev Mode (local demo)",
         key="force_dev_mode",
-        help="Use canned responses even if the backend is wired to Azure.",
+        help="Use canned responses even if backend is offline.",
     )
 
-with col_status:
+effective_dev_mode = backend_dev_mode or st.session_state.force_dev_mode
+
+with col2:
     if health is None:
         st.markdown(
             """
             <div class="tri-banner tri-banner-dev">
-                ⚠️ Backend health endpoint not reachable – check that FastAPI is running.
+                ⚠️ Backend unreachable — FastAPI not running.
             </div>
             """,
             unsafe_allow_html=True,
@@ -148,7 +142,7 @@ with col_status:
         st.markdown(
             """
             <div class="tri-banner tri-banner-dev">
-                🧪 Running in Dev Mode – using canned responses for a safe demo.
+                🧪 Dev Mode Active — using canned responses.
             </div>
             """,
             unsafe_allow_html=True,
@@ -157,122 +151,109 @@ with col_status:
         st.markdown(
             """
             <div class="tri-banner tri-banner-live">
-                ✅ Backend is running in Live Azure mode.
+                ✅ Backend running in Live Mode.
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-# Recompute after toggle (user may have just clicked it)
-effective_dev_mode = backend_dev_mode or st.session_state.force_dev_mode
+# -----------------------------------------------------------------------------
+# Department selector buttons
+# -----------------------------------------------------------------------------
+if "selected_domain" not in st.session_state:
+    st.session_state.selected_domain = "Auto"
 
-# ---------------------------------------------------------------------
-# Department selection buttons – styled via CSS to match Maps
-# ---------------------------------------------------------------------
 st.markdown("<p class='section-label'>Choose a department (optional)</p>", unsafe_allow_html=True)
-st.markdown("<div id='dept-buttons'>", unsafe_allow_html=True)
-
 cols = st.columns(4)
-button_defs = [
+
+buttons = [
     ("Auto", "Auto"),
     ("IT Agent", "IT"),
     ("HR Agent", "HR"),
     ("Finance Agent", "Finance"),
 ]
 
-for col, (label, domain) in zip(cols, button_defs):
+for col, (label, domain) in zip(cols, buttons):
     with col:
-        is_selected = st.session_state.selected_domain == domain
-        btn_type = "primary" if is_selected else "secondary"
-        if st.button(label, key=f"btn_{domain.lower()}", use_container_width=True, type=btn_type):
+        selected = st.session_state.selected_domain == domain
+        if st.button(label, type="primary" if selected else "secondary", use_container_width=True):
             st.session_state.selected_domain = domain
 
-st.markdown("</div>", unsafe_allow_html=True)
-
 st.markdown("---")
-st.markdown("<p class='section-label'>Describe your request</p>", unsafe_allow_html=True)
 
-# ---------------------------------------------------------------------
-# Ticket input form
-# ---------------------------------------------------------------------
-col_form, col_result = st.columns([1.3, 1.7])
+# -----------------------------------------------------------------------------
+# Ticket Form
+# -----------------------------------------------------------------------------
+col_form, col_result = st.columns([1.2, 1.8])
 
 with col_form:
-    title = st.text_input("Short summary", placeholder="e.g. 'Cannot access VPN'")
+    title = st.text_input("Short summary", placeholder="e.g. 'password reset'")
     description = st.text_area(
         "Details",
-        placeholder="Describe what's happening, affected systems, and any error messages.",
-        height=160,
+        placeholder="Explain what's happening...",
+        height=150,
     )
-    priority = st.selectbox(
-        "Priority",
-        ["Low", "Medium", "High", "Critical"],
-        index=1,
-    )
+    priority = st.selectbox("Priority", ["Low", "Medium", "High", "Critical"], index=1)
 
     submit = st.button("Submit to TriNexa", type="primary")
 
 with col_result:
     st.markdown("### Orchestrator Response")
 
-    if not submit:
-        ...
-    else:
-        ...
-            payload: Dict[str, Any] = {
-                ...
-            }
+    if submit:
+        payload = {
+            "title": title,
+            "description": description,
+            "priority": priority,
+            "domain": st.session_state.selected_domain,
+        }
 
-            url = f"{BACKEND_URL}/tickets/process"
+        with st.spinner("Processing request via TriNexa..."):
+            if effective_dev_mode or health is None:
+                data = fake_orchestrator_response(payload, st.session_state.selected_domain)
+            else:
+                data = submit_ticket(payload)
 
-                        with st.spinner("Asking TriNexa and domain agents..."):
-                # If we're in dev mode OR the backend health check failed,
-                # skip FastAPI entirely and use a canned response.
-                if effective_dev_mode or health is None:
-                    data = fake_orchestrator_response(
-                        payload,
-                        st.session_state.selected_domain,
-                    )
-                else:
-                    data = submit_ticket(payload)
+        if data.get("error"):
+            st.error(
+                f"⚠️ Error contacting backend at {TICKETS_ENDPOINT}\n\n{data.get('error')}"
+            )
+        else:
+            clf = data.get("classification", {})
+            agent = data.get("response", {})
 
-                    # ---------------- Classification card ----------------
-                    st.markdown(
-                        f"""
-                        <div class="tr-card" style="border-left: 4px solid {PALETTE['deep_blue']}">
-                            <strong>Classification</strong><br/>
-                            Department: <b>{clf.get('department', '—')}</b><br/>
-                            Confidence: {clf.get('confidence', '—')}<br/>
-                            <span style="font-size:0.85rem; opacity:0.9;">
-                            {clf.get('rationale', '')}
-                            </span>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-                    st.markdown("")
+            # Classification card
+            st.markdown(
+                f"""
+                <div class="tr-card" style="border-left: 4px solid {PALETTE['deep_blue']}">
+                    <strong>Classification</strong><br/>
+                    Department: <b>{clf.get('department','—')}</b><br/>
+                    Confidence: {clf.get('confidence','—')}<br/>
+                    <div style="font-size:0.85rem; opacity:0.9;">{clf.get('rationale','')}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
-                    # ---------------- Agent response card ----------------
-                    dept = agent.get("department") or clf.get("department") or "—"
-                    dept_color = DEPT_COLORS.get(dept, PALETTE["deep_blue"])
+            dept = agent.get("department") or clf.get("department") or "—"
+            dept_color = DEPT_COLORS.get(dept, PALETTE["deep_blue"])
 
-                    st.markdown(
-                        f"""
-                        <div class="tr-card" style="border-left: 4px solid {dept_color}">
-                            <strong>Agent:</strong> {agent.get('agent_name', 'TriResolve Orchestrator')}<br/>
-                            <strong>Department:</strong> {dept}<br/><br/>
-                            <strong>Summary</strong><br/>
-                            {agent.get('summary', '—')}<br/><br/>
-                            <strong>Recommended steps</strong><br/>
-                            <pre style="white-space:pre-wrap; font-size:0.85rem;">
+            # Agent card
+            st.markdown(
+                f"""
+                <div class="tr-card" style="border-left: 4px solid {dept_color}">
+                    <strong>Agent:</strong> {agent.get('agent_name','—')}<br/>
+                    <strong>Department:</strong> {dept}<br/><br/>
+                    <strong>Summary</strong><br/>
+                    {agent.get('summary','—')}<br/><br/>
+                    <strong>Recommended Steps</strong><br/>
+                    <pre style="white-space:pre-wrap; font-size:0.85rem;">
 {(agent.get('steps') or '').strip()}
-                            </pre>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
+                    </pre>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
-                    with st.expander("Raw response (debug)"):
-                        st.json(data)
-
-
+            with st.expander("Raw response (debug)"):
+                st.json(data)
