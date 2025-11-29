@@ -10,10 +10,10 @@ from backend.api.schemas import (
 from backend.services.classifier import classify_ticket
 from backend.services.azure_client import chat_completion
 
-# Name of the orchestrator deployment in Azure Foundry
+# Name of the orchestrator deployment in Azure
 ORCHESTRATOR_MODEL = os.getenv(
     "AZURE_OPENAI_DEPLOYMENT_ORCHESTRATOR",
-    None,  # falls back to settings.azure_openai_model if not set
+    None,  # falls back to settings.d_orchestrator if not set
 )
 
 
@@ -50,9 +50,13 @@ def process_ticket(ticket: TicketCreate) -> TicketResult:
 
     user_prompt = _build_user_prompt(ticket)
 
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
+
     answer = chat_completion(
-        system_prompt=system_prompt,
-        user_prompt=user_prompt,
+        messages=messages,
         model=ORCHESTRATOR_MODEL,
         temperature=0.4,  # a little more creative than default 0.2
         max_tokens=1200,
