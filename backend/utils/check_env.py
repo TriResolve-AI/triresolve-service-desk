@@ -25,7 +25,6 @@ REQUIRED_ENV_VARS = [
 ]
 
 
-
 def check_env() -> bool:
     """
     Check that all required environment variables are set.
