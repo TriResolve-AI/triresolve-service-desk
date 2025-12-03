@@ -50,6 +50,11 @@ class Settings:
     def AZURE_OPENAI_API_VERSION(self) -> str:
         return self._get("azure", "AZURE_OPENAI_API_VERSION", "2024-02-15-preview") or "2024-02-15-preview"
 
+        @property
+    def aiproject_api_key(self) -> str | None:
+        # Read AZURE_AIPROJECT_API_KEY from [azure] secrets or env
+        return self._get("azure", "AZURE_AIPROJECT_API_KEY")
+
     # ------------------------------------------------------------------
     # Dev mode toggle + convenience Azure env getters
     # ------------------------------------------------------------------
