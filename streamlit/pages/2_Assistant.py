@@ -7,11 +7,15 @@ from typing import Any, Dict
 import streamlit as st
 
 # -------------------------------------------------------------------------
-# Ensure repo root on path so we can import backend modules
+# Ensure both repo root and /streamlit are on sys.path
 # -------------------------------------------------------------------------
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.append(str(ROOT))
+THIS_FILE = Path(__file__).resolve()
+REPO_ROOT = THIS_FILE.parents[2]          # /triresolve-service-desk
+STREAMLIT_DIR = THIS_FILE.parents[1]      # /triresolve-service-desk/streamlit
+
+for p in (REPO_ROOT, STREAMLIT_DIR):
+    if str(p) not in sys.path:
+        sys.path.append(str(p))
 
 # Theme + styling
 from theme import PALETTE, inject_base_css  # type: ignore
@@ -31,6 +35,7 @@ except Exception:
         "HR": PALETTE["gold"],
         "Finance": PALETTE["teal"],
     }
+
 
 # -------------------------------------------------------------------------
 # Fake response for Dev Mode
@@ -73,22 +78,26 @@ def submit_ticket(payload: Dict[str, Any]) -> Dict[str, Any]:
     endpoint would call, but runs in-process inside Streamlit.
     """
     try:
-        # Map UI payload -> TicketCreate model
         selected_domain = payload.get("domain")
         if selected_domain == "Auto":
             selected_domain = None  # let classifier decide
 
-        ticket = TicketCreate(
-            title=payload.get("title") or "ticket",
-            description=payload.get("description") or "",
-            priority=payload.get("priority") or "Medium",
-            # If your TicketCreate doesn't have a `domain` field,
-            # you can remove this argument.
-            domain=selected_domain,  # type: ignore[arg-type]
-        )
+        # Some versions of TicketCreate may not accept `domain`; fall back gracefully.
+        try:
+            ticket = TicketCreate(
+                title=payload.get("title") or "ticket",
+                description=payload.get("description") or "",
+                priority=payload.get("priority") or "Medium",
+                domain=selected_domain,  # type: ignore[arg-type]
+            )
+        except TypeError:
+            ticket = TicketCreate(
+                title=payload.get("title") or "ticket",
+                description=payload.get("description") or "",
+                priority=payload.get("priority") or "Medium",
+            )
 
         result: TicketResult = process_ticket(ticket, force_dev=False)
-        # Convert Pydantic model to plain dict for the UI
         return result.model_dump()  # type: ignore[attr-defined]
 
     except Exception as exc:
