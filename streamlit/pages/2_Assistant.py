@@ -1,33 +1,32 @@
-from __future__ import annotations
+# streamlit/pages/2_Assistant.py
 
+from __future__ import annotations
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict
+from typing import Dict, Any
 
 import streamlit as st
+import requests
 
-# ---------------------------------------------------------------------
-# Ensure both /streamlit and repo root are on sys.path
-# ---------------------------------------------------------------------
+# ---------------------------------------------------------------
+# Path setup
+# ---------------------------------------------------------------
 HERE = Path(__file__).resolve()
-STREAMLIT_DIR = HERE.parents[1]   # .../streamlit
-ROOT = HERE.parents[2]            # repo root
+ROOT = HERE.parents[2]
+STREAMLIT_DIR = HERE.parents[1]
 
-for p in (STREAMLIT_DIR, ROOT):
+for p in (ROOT, STREAMLIT_DIR):
     if str(p) not in sys.path:
         sys.path.append(str(p))
 
 from theme import PALETTE, inject_base_css  # type: ignore
 from config import settings  # type: ignore
-from backend.services.azure_client import (  # type: ignore
-    orchestrator_chat,
-    domain_agent_chat,
-)
+from backend.services.azure_client import orchestrator_chat, domain_agent_chat  # type: ignore
 
-# ---------------------------------------------------------------------
-# Fallback department colors
-# ---------------------------------------------------------------------
+# ---------------------------------------------------------------
+# Colors
+# ---------------------------------------------------------------
 try:
     from theme import DEPT_COLORS  # type: ignore
 except Exception:
@@ -37,253 +36,174 @@ except Exception:
         "Finance": PALETTE["teal"],
     }
 
-# ---------------------------------------------------------------------
-# Fake response for Dev Mode (no Azure calls)
-# ---------------------------------------------------------------------
-def fake_orchestrator_response(payload: Dict[str, Any], dept: str) -> Dict[str, Any]:
+# ---------------------------------------------------------------
+# Foundry Workflow Calling
+# ---------------------------------------------------------------
+WORKFLOW_NAME = "trinexa-classify-orchestrate"
+WORKFLOW_API_VERSION = "2025-11-15-preview"
+
+def build_foundry_url() -> str:
+    base = settings.aiproject_endpoint.rstrip("/")
+    return (
+        f"{base}/applications/{WORKFLOW_NAME}"
+        f"/protocols/activityprotocol"
+        f"?api-version={WORKFLOW_API_VERSION}"
+    )
+
+def call_foundry_workflow(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Calls Azure AI Foundry workflow correctly."""
+    url = build_foundry_url()
+    api_key = settings.aiproject_api_key  # ✔ Correct key
+
+    headers = {
+        "Content-Type": "application/json",
+        "api-key": api_key,
+    }
+
+    body = {"input": payload}
+
+    resp = requests.post(url, json=body, headers=headers, timeout=40)
+    if not resp.ok:
+        try:
+            detail = resp.json()
+        except Exception:
+            detail = resp.text
+        raise RuntimeError(f"Error {resp.status_code}: {detail}")
+
+    data = resp.json()
+    return data.get("outputs") or data
+
+
+# ---------------------------------------------------------------
+# Dev mode fallback for demos
+# ---------------------------------------------------------------
+def fake_response(payload: Dict[str, Any], dept: str):
     if dept == "Auto":
         dept = "IT"
 
-    summary = (payload.get("description") or "")[:80] + "..."
+    summary = (payload["description"] or "")[:80]
     return {
         "classification": {
             "department": dept,
-            "confidence": 0.92,
-            "rationale": (
-                "Dev mode: canned classification response. "
-                "In live mode, the TriNexa classifier + orchestrator would "
-                "evaluate and route this ticket."
-            ),
+            "confidence": 0.99,
+            "rationale": "Dev mode activated.",
         },
         "response": {
             "agent_name": f"{dept} Agent",
             "department": dept,
-            "summary": f"Dev-mode response for {dept}. Summary: {summary}",
-            "steps": (
-                "- This is a simulated response because Dev Mode is enabled.\n"
-                f"- In live mode, TriNexa would invoke the {dept} domain agent "
-                "through Azure OpenAI.\n"
-            ),
+            "summary": f"Simulated summary for {dept}: {summary}",
+            "steps": "- This is a simulated response.\n- Azure not called.\n",
         },
     }
 
 
-# ---------------------------------------------------------------------
-# Shared styles
-# ---------------------------------------------------------------------
+# ---------------------------------------------------------------
+# UI
+# ---------------------------------------------------------------
 inject_base_css()
-
 st.title("🧩 TriNexa Assistant")
 
-st.write(
-    """
-This is the **front door** to the orchestration layer.
-
-TriNexa will eventually:
-- Classify intent  
-- Route to IT / HR / Finance agents  
-- Aggregate responses back to the user  
-"""
-)
-
-# ---------------------------------------------------------------------
-# Dev mode toggle (UI + global setting)
-# ---------------------------------------------------------------------
+# Dev mode toggle
 if "force_dev_mode" not in st.session_state:
     st.session_state.force_dev_mode = False
 
-col1, col2 = st.columns([1.2, 3])
+dev_col, banner_col = st.columns([1.2, 3])
+with dev_col:
+    st.checkbox("Force Dev Mode", key="force_dev_mode")
 
-with col1:
-    st.checkbox(
-        "Force Dev Mode (local demo)",
-        key="force_dev_mode",
-        help="Use canned responses instead of calling Azure OpenAI.",
-    )
+effective_dev = settings.DEV_MODE or st.session_state.force_dev_mode
+os.environ["TRIRESOLVE_DEV_MODE"] = "true" if effective_dev else "false"
 
-effective_dev_mode = settings.DEV_MODE or st.session_state.force_dev_mode
-
-# Also mirror into env so azure_client can see it if needed
-os.environ["TRIRESOLVE_DEV_MODE"] = "true" if effective_dev_mode else "false"
-
-with col2:
-    if effective_dev_mode:
+with banner_col:
+    if effective_dev:
         st.markdown(
-            """
-            <div class="tri-banner tri-banner-dev">
-                🧪 Dev Mode Active — using canned responses (no live Azure calls).
-            </div>
-            """,
+            "<div class='tri-banner tri-banner-dev'>🧪 Dev Mode Active</div>",
             unsafe_allow_html=True,
         )
     else:
         st.markdown(
-            """
-            <div class="tri-banner tri-banner-live">
-                ✅ Live Mode — calling the TriNexa orchestrator pipeline via Azure OpenAI (SDK).
+            "<div class='tri-banner tri-banner-live'>✅ Live Mode Enabled</div>",
+            unsafe_allow_html=True,
+        )
+
+# Department buttons
+if "selected_domain" not in st.session_state:
+    st.session_state.selected_domain = "Auto"
+
+st.markdown("<p class='section-label'>Choose a department</p>", unsafe_allow_html=True)
+colA, colB, colC, colD = st.columns(4)
+
+for col, (label, val) in zip(
+    (colA, colB, colC, colD),
+    [("Auto", "Auto"), ("IT Agent", "IT"), ("HR Agent", "HR"), ("Finance Agent", "Finance")],
+):
+    with col:
+        selected = st.session_state.selected_domain == val
+        if st.button(label, type="primary" if selected else "secondary", use_container_width=True):
+            st.session_state.selected_domain = val
+
+st.markdown("---")
+
+# Form
+col_form, col_res = st.columns([1.2, 1.8])
+
+with col_form:
+    title = st.text_input("Short summary")
+    description = st.text_area("Details", height=150)
+    priority = st.selectbox("Priority", ["Low", "Medium", "High", "Critical"], index=1)
+    submit = st.button("Submit", type="primary")
+
+with col_res:
+    st.markdown("### Orchestrator Response")
+
+    if submit:
+        payload = {
+            "title": title,
+            "description": description,
+            "priority": priority,
+            "department": st.session_state.selected_domain,
+        }
+
+        if effective_dev:
+            result = fake_response(payload, st.session_state.selected_domain)
+        else:
+            try:
+                result = call_foundry_workflow(payload)
+            except Exception as e:
+                st.error(f"⚠️ Error calling Foundry workflow:<br>{e}", unsafe_allow_html=True)
+                st.stop()
+
+        clf = result.get("classification", {})
+        agent = result.get("response", {})
+
+        # Classification card
+        st.markdown(
+            f"""
+            <div class="tr-card" style="border-left: 4px solid {PALETTE['deep_blue']}">
+                <strong>Classification</strong><br/>
+                Department: <b>{clf.get('department')}</b><br/>
+                Confidence: {clf.get('confidence')}</b><br/>
+                <div style="font-size:0.85rem;">{clf.get('rationale')}</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-# ---------------------------------------------------------------------
-# Department selector buttons (original behavior)
-# ---------------------------------------------------------------------
-if "selected_domain" not in st.session_state:
-    st.session_state.selected_domain = "Auto"
+        dept = agent.get("department") or clf.get("department")
+        color = DEPT_COLORS.get(dept, PALETTE["deep_blue"])
 
-st.markdown(
-    "<p class='section-label'>Choose a department (optional)</p>",
-    unsafe_allow_html=True,
-)
-cols = st.columns(4)
+        st.markdown(
+            f"""
+            <div class="tr-card" style="border-left: 4px solid {color}">
+                <strong>Agent:</strong> {agent.get('agent_name')}<br/>
+                <strong>Department:</strong> {dept}<br/><br/>
+                <strong>Summary</strong><br/>{agent.get('summary')}<br/><br/>
+                <strong>Recommended Steps</strong><br/>
+                <pre>{agent.get('steps')}</pre>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-buttons = [
-    ("Auto", "Auto"),
-    ("IT Agent", "IT"),
-    ("HR Agent", "HR"),
-    ("Finance Agent", "Finance"),
-]
-
-for col, (label, domain) in zip(cols, buttons):
-    with col:
-        selected = st.session_state.selected_domain == domain
-        btn_type = "primary" if selected else "secondary"
-        # We keep use_container_width for now; the deprecation is just a warning.
-        if st.button(
-            label,
-            type=btn_type,
-            key=f"dept_{domain}",
-            use_container_width=True,
-        ):
-            st.session_state.selected_domain = domain
-
-st.markdown("---")
-
-# ---------------------------------------------------------------------
-# Ticket Form + Orchestrator Response
-# ---------------------------------------------------------------------
-col_form, col_result = st.columns([1.2, 1.8])
-
-with col_form:
-    title = st.text_input("Short summary", placeholder="e.g. 'password reset'")
-    description = st.text_area(
-        "Details",
-        placeholder="Explain what's happening...",
-        height=150,
-    )
-    priority = st.selectbox(
-        "Priority",
-        ["Low", "Medium", "High", "Critical"],
-        index=1,
-    )
-
-    submit = st.button("Submit to TriNexa", type="primary", key="submit_ticket")
-
-with col_result:
-    st.markdown("### Orchestrator Response")
-
-    if submit:
-        if not title and not description:
-            st.warning("Please provide at least a summary or details for your ticket.")
-        else:
-            payload = {
-                "title": title or "(no title)",
-                "description": description or "(no description)",
-                "priority": priority,
-                "domain": st.session_state.selected_domain,
-            }
-
-            selected = st.session_state.selected_domain
-
-            # Build a unified message string for the models
-            user_message = (
-                f"Title: {payload['title']}\n"
-                f"Priority: {priority}\n"
-                f"Details: {payload['description']}"
-            )
-
-            try:
-                with st.spinner("Processing request via TriNexa..."):
-                    if effective_dev_mode:
-                        data = fake_orchestrator_response(payload, selected)
-                        clf = data.get("classification", {}) or {}
-                        agent = data.get("response", {}) or {}
-                    else:
-                        # Live SDK call: orchestrator or specific domain agent
-                        if selected == "Auto":
-                            reply_text = orchestrator_chat(user_message)
-                            routed = "Auto (orchestrator decides)"
-                        else:
-                            reply_text = domain_agent_chat(
-                                user_message,
-                                domain=selected.lower(),
-                            )
-                            routed = selected
-
-                        # Synthesize a classification/agent structure for the UI
-                        clf = {
-                            "department": routed,
-                            "confidence": "—",
-                            "rationale": (
-                                "Live mode: routed using Azure OpenAI deployments. "
-                                "For this UI, routing metadata is inferred from your selection."
-                            ),
-                        }
-                        agent = {
-                            "agent_name": "TriNexa Assistant",
-                            "department": routed,
-                            "summary": reply_text,
-                            "steps": "",
-                        }
-
-            except Exception as exc:  # noqa: BLE001
-                st.error(
-                    "⚠️ Error calling Azure OpenAI. "
-                    "Please verify your AZURE_OPENAI_* settings in Streamlit secrets.\n\n"
-                    f"Details: {exc}"
-                )
-            else:
-                # Classification card
-                st.markdown(
-                    f"""
-                    <div class="tr-card" style="border-left: 4px solid {PALETTE['deep_blue']}">
-                        <strong>Classification</strong><br/>
-                        Department: <b>{clf.get('department','—')}</b><br/>
-                        Confidence: {clf.get('confidence','—')}</b><br/>
-                        <div style="font-size:0.85rem; opacity:0.9;">
-                            {clf.get('rationale','')}
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-
-                dept = (
-                    agent.get("department")
-                    or clf.get("department")
-                    or payload.get("domain")
-                    or "—"
-                )
-                dept_color = DEPT_COLORS.get(dept, PALETTE["deep_blue"])
-
-                # Agent card
-                st.markdown(
-                    f"""
-                    <div class="tr-card" style="border-left: 4px solid {dept_color}">
-                        <strong>Agent:</strong> {agent.get('agent_name','—')}<br/>
-                        <strong>Department:</strong> {dept}<br/><br/>
-                        <strong>Summary</strong><br/>
-                        {agent.get('summary','—')}<br/><br/>
-                        <strong>Recommended Steps</strong><br/>
-                        <pre style="white-space:pre-wrap; font-size:0.85rem;">
-{(agent.get('steps') or '').strip()}
-                        </pre>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-
-                with st.expander("Raw data (debug)"):
-                    st.json({"classification": clf, "response": agent})
-
+        with st.expander("Raw output (debug)"):
+            st.json(result)
