@@ -1,224 +1,331 @@
-# streamlit/streamlit_app.py
+from __future__ import annotations
 
+import os
+import sys
+from pathlib import Path
+from typing import Any, Dict
+
+import requests
 import streamlit as st
 
 # -------------------------------------------------------------------
-# Brand palette (match Maps page)
+# Ensure both repo root and /streamlit on sys.path
 # -------------------------------------------------------------------
-PALETTE = {
-    "deep_blue": "#00547D",     # header / chip
-    "teal": "#1FB7A6",          # teal loop
-    "gold": "#F3B147",          # gold loop
-    "coral": "#F2654C",         # coral loop
-    "soft_cream": "#FFF7E8",    # main background
-    "ink": "#121826",           # dark text
-}
+HERE = Path(__file__).resolve()
+STREAMLIT_DIR = HERE.parents[1]  # .../streamlit
+ROOT = HERE.parents[2]           # repo root
 
-st.set_page_config(
-    page_title="TriResolve AI – Service Desk Platform",
-    page_icon="🧠",
-    layout="wide",
-)
+for p in (STREAMLIT_DIR, ROOT):
+    if str(p) not in sys.path:
+        sys.path.append(str(p))
+
+from theme import PALETTE, inject_base_css  # type: ignore
+from config import settings  # type: ignore
 
 # -------------------------------------------------------------------
-# Global CSS – fix contrast + layout
+# Foundry (Azure AI Project) configuration
 # -------------------------------------------------------------------
-st.markdown(
-    f"""
-    <style>
-    /* App background */
-    div.block-container {{
-        background-color: {PALETTE["soft_cream"]};
-        padding-top: 2.5rem;
-        padding-bottom: 2.5rem;
-    }}
+# Base project endpoint, e.g.
+#   https://trinexa-openai.services.ai.azure.com/api/projects/trinexa-foundry
+AIPROJECT_BASE = (settings.aiproject_endpoint or "").rstrip("/")
 
-    /* Sidebar gradient */
-    section[data-testid="stSidebar"] {{
-        background: linear-gradient(
-            180deg,
-            {PALETTE["deep_blue"]} 0%,
-            {PALETTE["teal"]} 100%
-        );
-    }}
+# Your workflow application name in Foundry
+WORKFLOW_APP_NAME = "trinexa-classify-orchestrate"
 
-    /* Global text colour (fix white-on-cream issue) */
-    body, p, li, span, div, label {{
-        color: {PALETTE["ink"]} !important;
-    }}
+# API version for Activity Protocol
+WORKFLOW_API_VERSION = "2025-11-15-preview"
 
-    /* Headings */
-    h1, h2, h3, h4, h5, h6 {{
-        color: {PALETTE["ink"]} !important;
-        font-weight: 700;
-    }}
 
-    /* Hero strip at the top */
-    .triresolve-hero-badge {{
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        padding: 0.2rem 0.8rem;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.7);
-        color: {PALETTE["deep_blue"]};
-        font-size: 0.8rem;
-        font-weight: 600;
-    }}
-
-    .triresolve-hero-title {{
-        font-size: 2.4rem;
-        font-weight: 800;
-        margin-top: 0.4rem;
-        margin-bottom: 0.25rem;
-    }}
-
-    .triresolve-hero-subtitle {{
-        font-size: 1rem;
-        font-weight: 500;
-        color: {PALETTE["deep_blue"]};
-        opacity: 0.95;
-    }}
-
-    /* Status cards on the right */
-    .status-card {{
-        padding: 1.25rem 1.5rem;
-        border-radius: 1.25rem;
-        background: #FFFFFF;
-        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
-        margin-bottom: 1rem;
-        border-left: 4px solid transparent;
-        color: {PALETTE["ink"]};
-    }}
-    .status-card h4 {{
-        margin: 0 0 0.25rem 0;
-        font-size: 0.95rem;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: {PALETTE["deep_blue"]};
-    }}
-    .status-card p {{
-        margin: 0;
-        font-size: 0.9rem;
-    }}
-
-    .status-card--ui {{
-        border-left-color: {PALETTE["teal"]};
-    }}
-    .status-card--backend {{
-        border-left-color: {PALETTE["gold"]};
-    }}
-    .status-card--agents {{
-        border-left-color: {PALETTE["coral"]};
-    }}
-
-    /* Domain pills */
-    .domain-pill {{
-        display: inline-flex;
-        align-items: center;
-        padding: 0.35rem 0.9rem;
-        border-radius: 999px;
-        border: 1px solid rgba(0,0,0,0.06);
-        background: #FFFFFF;
-        font-size: 0.85rem;
-        font-weight: 500;
-        color: {PALETTE["deep_blue"]};
-        margin-right: 0.4rem;
-        margin-bottom: 0.3rem;
-    }}
-
-    .section-label {{
-        text-transform: uppercase;
-        letter-spacing: 0.12em;
-        font-size: 0.8rem;
-        color: rgba(15,23,42,0.65);
-        margin-bottom: 0.4rem;
-    }}
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-# -------------------------------------------------------------------
-# Main layout
-# -------------------------------------------------------------------
-st.markdown(
+def get_foundry_workflow_url() -> str:
     """
-    <div class="triresolve-hero-badge">
-        <span>TriResolveAI</span>
-        <span>Service Desk</span>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-st.markdown(
+    Build the ActivityProtocol URL for the TriNexa orchestrator workflow.
     """
-    <div class="triresolve-hero-title">
-        TriResolve AI – Service Desk Platform
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+    if not AIPROJECT_BASE:
+        raise RuntimeError(
+            "AZURE_AIPROJECT_ENDPOINT is not configured. "
+            "Set it in Streamlit secrets under [azure]."
+        )
 
-st.markdown(
-    """
-    <div class="triresolve-hero-subtitle">
-        Powered by <strong>TriNexa</strong>, your multi-domain orchestrator for IT, HR, and Finance.
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-st.markdown("")  # spacer
-
-left, right = st.columns([2, 1])
-
-with left:
-    st.markdown('<div class="section-label">Overview</div>', unsafe_allow_html=True)
-    st.write(
-        """
-        TriResolve AI is your **multi-agent service desk layer**:
-
-        - Ingests tickets and signals from IT, HR, and Finance systems  
-        - Routes them through **TriNexa**, the global orchestrator  
-        - Delegates tasks to specialized agents (IT, HR, Finance, Architect, Security, Ops)  
-        - Aggregates resolutions and surfaces them back in one unified workspace  
-        """
+    return (
+        f"{AIPROJECT_BASE}"
+        f"/applications/{WORKFLOW_APP_NAME}"
+        f"/protocols/activityprotocol"
+        f"?api-version={WORKFLOW_API_VERSION}"
     )
 
-    st.markdown('<div class="section-label">Domains</div>', unsafe_allow_html=True)
-    st.markdown(
-        """
-        <span class="domain-pill">IT Service Desk</span>
-        <span class="domain-pill">HR &amp; People Ops</span>
-        <span class="domain-pill">Finance &amp; Spend</span>
-        """,
-        unsafe_allow_html=True,
+
+def call_trinexa_workflow(ticket_payload: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Call the TriNexa Foundry workflow via ActivityProtocol.
+
+    ticket_payload is the UI payload:
+        {title, description, priority, domain}
+    """
+    url = get_foundry_workflow_url()
+
+    # Prefer a dedicated project key if provided; fall back to OpenAI key.
+    api_key = settings.aiproject_resource_id or settings.openai_api_key
+    if not api_key:
+        raise RuntimeError(
+            "No Foundry API key configured. Set AZURE_AIPROJECT_RESOURCE_ID or "
+            "AZURE_OPENAI_API_KEY in Streamlit secrets."
+        )
+
+    headers = {
+        "Content-Type": "application/json",
+        "api-key": api_key,
+    }
+
+    body = {
+        "input": {
+            "title": ticket_payload.get("title"),
+            "description": ticket_payload.get("description"),
+            "priority": ticket_payload.get("priority"),
+            "department": ticket_payload.get("domain"),
+            # Also pass full ticket in case the workflow expects `ticket`.
+            "ticket": ticket_payload,
+        }
+    }
+
+    resp = requests.post(url, json=body, headers=headers, timeout=40)
+    if not resp.ok:
+        try:
+            err_json = resp.json()
+        except Exception:
+            err_json = resp.text
+        raise RuntimeError(f"Error code: {resp.status_code} - {err_json}")
+
+    data = resp.json()
+    # Standard ActivityProtocol response shape:
+    #   { "status": "...", "outputs": { ... } }
+    outputs = data.get("outputs") or data
+    return outputs
+
+
+# -------------------------------------------------------------------
+# Fake response for Dev Mode (no Foundry call)
+# -------------------------------------------------------------------
+def fake_orchestrator_response(payload: Dict[str, Any]) -> Dict[str, Any]:
+    dept = payload.get("domain") or "IT"
+    if dept == "Auto":
+        dept = "IT"
+
+    summary = (payload.get("description") or "")[:80] + "..."
+    return {
+        "classification": {
+            "department": dept,
+            "confidence": 0.92,
+            "rationale": (
+                "Dev mode: canned classification response. "
+                "In live mode, the TriNexa workflow would classify this ticket."
+            ),
+        },
+        "response": {
+            "agent_name": f"{dept} Agent",
+            "department": dept,
+            "summary": f"Dev-mode response for {dept}. Summary: {summary}",
+            "steps": (
+                "- This is a simulated response because Dev Mode is enabled "
+                "or Foundry is unreachable.\n"
+                f"- In live mode, the workflow would invoke the {dept} agent.\n"
+                "- Use this for demoing the UI when Azure is offline.\n"
+            ),
+        },
+    }
+
+
+# -------------------------------------------------------------------
+# Department color fallback (in case theme.DEPT_COLORS missing)
+# -------------------------------------------------------------------
+try:
+    from theme import DEPT_COLORS  # type: ignore
+except Exception:
+    DEPT_COLORS = {
+        "IT": PALETTE["coral"],
+        "HR": PALETTE["gold"],
+        "Finance": PALETTE["teal"],
+    }
+
+# -------------------------------------------------------------------
+# Shared styles
+# -------------------------------------------------------------------
+inject_base_css()
+
+# -------------------------------------------------------------------
+# UI Header
+# -------------------------------------------------------------------
+st.title("🧩 TriNexa Assistant")
+
+st.write(
+    """
+    This is the **front door** to the orchestration layer.
+
+    TriNexa will eventually:
+    - Classify intent  
+    - Route to IT / HR / Finance agents  
+    - Aggregate responses back to the user  
+    """
+)
+
+# -------------------------------------------------------------------
+# Dev mode toggle (no backend health check anymore)
+# -------------------------------------------------------------------
+if "force_dev_mode" not in st.session_state:
+    st.session_state.force_dev_mode = False
+
+col1, col2 = st.columns([1.2, 3])
+
+with col1:
+    st.checkbox(
+        "Force Dev Mode (local demo)",
+        key="force_dev_mode",
+        help="Use canned responses instead of calling the Foundry workflow.",
     )
 
-with right:
-    st.markdown('<div class="section-label">Status</div>', unsafe_allow_html=True)
+effective_dev_mode = bool(st.session_state.force_dev_mode)
 
-    st.markdown(
-        """
-        <div class="status-card status-card--ui">
-            <h4>UI shell</h4>
-            <p>Online in Streamlit, using the TriResolveAI brand system.</p>
-        </div>
-        <div class="status-card status-card--backend">
-            <h4>Backend orchestration</h4>
-            <p>FastAPI + Azure OpenAI orchestrator (TriNexa) wiring in progress.</p>
-        </div>
-        <div class="status-card status-card--agents">
-            <h4>Agents</h4>
-            <p>HR, IT, Finance agents configured in Azure AI Foundry with space to add Architect, Security, and Ops.</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+with col2:
+    if effective_dev_mode:
+        st.markdown(
+            """
+            <div class="tri-banner tri-banner-dev">
+                🧪 Dev Mode Active — using canned responses (no Foundry calls).
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            """
+            <div class="tri-banner tri-banner-live">
+                ✅ Live Mode — calling the TriNexa orchestrator workflow
+                (Azure AI Foundry).
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+# -------------------------------------------------------------------
+# Department selector buttons
+# -------------------------------------------------------------------
+if "selected_domain" not in st.session_state:
+    st.session_state.selected_domain = "Auto"
+
+st.markdown(
+    "<p class='section-label'>Choose a department (optional)</p>",
+    unsafe_allow_html=True,
+)
+cols = st.columns(4)
+
+buttons = [
+    ("Auto", "Auto"),
+    ("IT Agent", "IT"),
+    ("HR Agent", "HR"),
+    ("Finance Agent", "Finance"),
+]
+
+for col, (label, domain) in zip(cols, buttons):
+    with col:
+        selected = st.session_state.selected_domain == domain
+        btn_type = "primary" if selected else "secondary"
+        # We'll live with the deprecation warning for use_container_width;
+        # this keeps the layout nice for now.
+        if st.button(
+            label,
+            type=btn_type,
+            key=f"dept_{domain}",
+            use_container_width=True,
+        ):
+            st.session_state.selected_domain = domain
 
 st.markdown("---")
-st.caption(
-    "Use the sidebar to navigate to **Maps**, **Assistant (TriNexa)**, and **About**."
-)
+
+# -------------------------------------------------------------------
+# Ticket Form
+# -------------------------------------------------------------------
+col_form, col_result = st.columns([1.2, 1.8])
+
+with col_form:
+    title = st.text_input("Short summary", placeholder="e.g. 'password reset'")
+    description = st.text_area(
+        "Details",
+        placeholder="Explain what's happening...",
+        height=150,
+    )
+    priority = st.selectbox(
+        "Priority", ["Low", "Medium", "High", "Critical"], index=1
+    )
+
+    submit = st.button("Submit to TriNexa", type="primary", key="submit_ticket")
+
+with col_result:
+    st.markdown("### Orchestrator Response")
+
+    if submit:
+        if not title and not description:
+            st.warning("Please provide at least a summary or details for your ticket.")
+        else:
+            payload = {
+                "title": title or "(no title)",
+                "description": description or "(no description)",
+                "priority": priority,
+                "domain": st.session_state.selected_domain,
+            }
+
+            with st.spinner("Processing request via TriNexa..."):
+                try:
+                    if effective_dev_mode:
+                        data = fake_orchestrator_response(payload)
+                    else:
+                        data = call_trinexa_workflow(payload)
+                except Exception as exc:
+                    st.error(
+                        f"⚠️ Error running TriNexa orchestrator:\n\n{exc}"
+                    )
+                    st.stop()
+
+            clf = data.get("classification", {}) or {}
+            agent = data.get("response", {}) or {}
+
+            # Classification card
+            st.markdown(
+                f"""
+                <div class="tr-card" style="border-left: 4px solid {PALETTE['deep_blue']}">
+                    <strong>Classification</strong><br/>
+                    Department: <b>{clf.get('department','—')}</b><br/>
+                    Confidence: {clf.get('confidence','—')}</b><br/>
+                    <div style="font-size:0.85rem; opacity:0.9;">
+                        {clf.get('rationale','')}
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            dept = (
+                agent.get("department")
+                or clf.get("department")
+                or payload.get("domain")
+                or "—"
+            )
+            dept_color = DEPT_COLORS.get(dept, PALETTE["deep_blue"])
+
+            # Agent card
+            st.markdown(
+                f"""
+                <div class="tr-card" style="border-left: 4px solid {dept_color}">
+                    <strong>Agent:</strong> {agent.get('agent_name','—')}<br/>
+                    <strong>Department:</strong> {dept}<br/><br/>
+                    <strong>Summary</strong><br/>
+                    {agent.get('summary','—')}<br/><br/>
+                    <strong>Recommended Steps</strong><br/>
+                    <pre style="white-space:pre-wrap; font-size:0.85rem;">
+{(agent.get('steps') or '').strip()}
+                    </pre>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            with st.expander("Raw workflow outputs (debug)"):
+                st.json(data)
