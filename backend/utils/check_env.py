@@ -10,6 +10,7 @@ import sys
 
 # Required environment variables for Azure OpenAI integration
 REQUIRED_ENV_VARS = [
+    # Core Azure OpenAI config
     "AZURE_OPENAI_ENDPOINT",
     "AZURE_OPENAI_API_KEY",
     "AZURE_OPENAI_API_VERSION",
@@ -49,22 +50,19 @@ def check_env() -> bool:
             empty.append(var)
 
     if missing or empty:
-        print("\n❌  ERROR: Environment validation failed.\n")
+        print("\n❌ Environment Variable Check FAILED\n")
 
         if missing:
-            print("Missing variables:")
+            print("Missing (not set at all):")
             for var in missing:
                 print(f"  - {var}")
+            print()
 
         if empty:
-            print("\nEmpty variables (defined but blank):")
+            print("Empty (set but blank):")
             for var in empty:
                 print(f"  - {var}")
-
-        print("\nConfigure these values in:")
-        print("  • Streamlit secrets.toml (cloud deploy)")
-        print("  • Local .env (development)")
-        print("  • GitHub Secrets (CI)\n")
+            print()
 
         return False
 
