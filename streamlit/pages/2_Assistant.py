@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 import streamlit as st
+from openai import AzureOpenAI  # make sure `openai` package is installed
 
 # ---------------------------------------------------------------------
 # Path setup: ensure both /streamlit and repo root are importable
@@ -17,15 +18,48 @@ STREAMLIT_DIR = HERE.parents[1]   # .../streamlit
 ROOT = HERE.parents[2]            # repo root
 
 for p in (STREAMLIT_DIR, ROOT):
-    if str(p) not in sys.path:
-        sys.path.append(str(p))
+    s = str(p)
+    if s not in sys.path:
+        sys.path.append(s)
 
 from theme import PALETTE, inject_base_css  # type: ignore
 from config import settings  # type: ignore
-from backend.services.azure_client import (  # type: ignore
-    orchestrator_chat,
-    domain_agent_chat,
+
+# ---------------------------------------------------------------------
+# Azure OpenAI client (Next-gen SDK)
+# ---------------------------------------------------------------------
+client = AzureOpenAI(
+    azure_endpoint=settings.openai_endpoint,
+    api_key=settings.openai_api_key,
+    api_version=settings.openai_api_version,
 )
+
+ORCHESTRATOR_MODEL = settings.d_orchestrator  # e.g. "gpt-4.1"
+
+
+def call_orchestrator_chat(message: str, department: str | None = None) -> str:
+    """Call Azure OpenAI directly as our 'orchestrator' brain."""
+    system_parts = [
+        "You are TriNexa, the orchestrator for the TriResolve AI service desk.",
+        "You classify requests and respond with clear, actionable steps.",
+        "You support the IT, HR, and Finance departments.",
+    ]
+    if department and department != "Auto":
+        system_parts.append(f"Treat this as a {department} ticket.")
+
+    system_prompt = " ".join(system_parts)
+
+    resp = client.chat.completions.create(
+        model=ORCHESTRATOR_MODEL,
+        temperature=0.3,
+        max_tokens=600,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": message},
+        ],
+    )
+    return resp.choices[0].message.content or ""
+
 
 # ---------------------------------------------------------------------
 # Fallback department colors
@@ -38,6 +72,7 @@ except Exception:
         "HR": PALETTE["gold"],
         "Finance": PALETTE["teal"],
     }
+
 
 # ---------------------------------------------------------------------
 # Fake response for Dev Mode (no Azure calls)
@@ -53,8 +88,7 @@ def fake_orchestrator_response(payload: Dict[str, Any], dept: str) -> Dict[str, 
             "confidence": 0.92,
             "rationale": (
                 "Dev mode: canned classification response. "
-                "In live mode, the TriNexa classifier + orchestrator would "
-                "evaluate and route this ticket using Azure OpenAI."
+                "In live mode, TriNexa (gpt-4.1) would classify and route this ticket."
             ),
         },
         "response": {
@@ -63,8 +97,7 @@ def fake_orchestrator_response(payload: Dict[str, Any], dept: str) -> Dict[str, 
             "summary": f"Dev-mode response for {dept}. Summary: {summary}",
             "steps": (
                 "- This is a simulated response because Dev Mode is enabled.\n"
-                f"- In live mode, TriNexa would invoke the {dept} domain agent "
-                "through Azure OpenAI.\n"
+                f"- In live mode, TriNexa would call Azure OpenAI ({dept} context).\n"
             ),
         },
     }
@@ -85,9 +118,6 @@ TriNexa will:
 - Classify intent  
 - Route to IT / HR / Finance agents  
 - Aggregate responses back to the user  
-
-In **Live Mode**, this page calls our **Azure OpenAI** deployments
-(`gpt-4.1`, `gpt-4o`, `gpt-4.1-mini`) via the shared backend helper.
 """
 )
 
@@ -107,8 +137,6 @@ with col1:
     )
 
 effective_dev_mode = settings.DEV_MODE or st.session_state.force_dev_mode
-
-# Mirror into env so azure_client can see it if needed
 os.environ["TRIRESOLVE_DEV_MODE"] = "true" if effective_dev_mode else "false"
 
 with col2:
@@ -125,7 +153,7 @@ with col2:
         st.markdown(
             """
             <div class="tri-banner tri-banner-live">
-                ✅ Live Mode — calling the TriNexa orchestrator pipeline via Azure OpenAI.
+                ✅ Live Mode — calling Azure OpenAI (gpt-4.1) via the TriNexa orchestrator.
             </div>
             """,
             unsafe_allow_html=True,
@@ -154,7 +182,6 @@ for col, (label, domain) in zip(cols, buttons):
     with col:
         selected = st.session_state.selected_domain == domain
         btn_type = "primary" if selected else "secondary"
-        # Yes, this is deprecated, but it's just a warning and the layout looks right.
         if st.button(
             label,
             type=btn_type,
@@ -192,56 +219,42 @@ with col_result:
         if not title and not description:
             st.warning("Please provide at least a summary or details for your ticket.")
         else:
+            dept = st.session_state.selected_domain
             payload = {
                 "title": title or "(no title)",
                 "description": description or "(no description)",
                 "priority": priority,
-                "domain": st.session_state.selected_domain,
+                "department": dept,
             }
 
-            selected = st.session_state.selected_domain
-
-            # Build a unified message string for the models
-            user_message = (
-                f"Title: {payload['title']}\n"
-                f"Priority: {priority}\n"
-                f"Details: {payload['description']}"
-            )
-
             try:
-                with st.spinner("Processing request via TriNexa..."):
-                    if effective_dev_mode:
-                        data = fake_orchestrator_response(payload, selected)
-                        clf = data.get("classification", {}) or {}
-                        agent = data.get("response", {}) or {}
-                    else:
-                        # Live Azure OpenAI call: orchestrator or specific domain agent
-                        if selected == "Auto":
-                            reply_text = orchestrator_chat(user_message)
-                            routed = "Auto (orchestrator decides)"
-                        else:
-                            reply_text = domain_agent_chat(
-                                user_message,
-                                domain=selected.lower(),
-                            )
-                            routed = selected
+                if effective_dev_mode:
+                    data = fake_orchestrator_response(payload, dept)
+                else:
+                    user_message = (
+                        f"Title: {payload['title']}\n"
+                        f"Priority: {priority}\n"
+                        f"Department selection: {dept}\n"
+                        f"Details: {payload['description']}"
+                    )
+                    reply_text = call_orchestrator_chat(user_message, dept)
 
-                        # Synthesize a classification/agent structure for the UI
-                        clf = {
-                            "department": routed,
+                    data = {
+                        "classification": {
+                            "department": dept if dept != "Auto" else "Auto (orchestrator decides)",
                             "confidence": "—",
                             "rationale": (
-                                "Live mode: routed using Azure OpenAI deployments. "
-                                "For this UI, routing metadata is inferred from your selection "
-                                "or the orchestrator."
+                                "Live mode: classified and answered using Azure OpenAI "
+                                f"model '{ORCHESTRATOR_MODEL}'."
                             ),
-                        }
-                        agent = {
+                        },
+                        "response": {
                             "agent_name": "TriNexa Assistant",
-                            "department": routed,
+                            "department": dept,
                             "summary": reply_text,
                             "steps": "",
-                        }
+                        },
+                    }
 
             except Exception as exc:  # noqa: BLE001
                 st.error(
@@ -250,6 +263,9 @@ with col_result:
                     f"Details: {exc}"
                 )
             else:
+                clf = data.get("classification", {}) or {}
+                agent = data.get("response", {}) or {}
+
                 # Classification card
                 st.markdown(
                     f"""
@@ -265,20 +281,20 @@ with col_result:
                     unsafe_allow_html=True,
                 )
 
-                dept = (
+                resolved_dept = (
                     agent.get("department")
                     or clf.get("department")
-                    or payload.get("domain")
+                    or payload.get("department")
                     or "—"
                 )
-                dept_color = DEPT_COLORS.get(dept, PALETTE["deep_blue"])
+                dept_color = DEPT_COLORS.get(resolved_dept, PALETTE["deep_blue"])
 
                 # Agent card
                 st.markdown(
                     f"""
                     <div class="tr-card" style="border-left: 4px solid {dept_color}">
                         <strong>Agent:</strong> {agent.get('agent_name','—')}<br/>
-                        <strong>Department:</strong> {dept}<br/><br/>
+                        <strong>Department:</strong> {resolved_dept}<br/><br/>
                         <strong>Summary</strong><br/>
                         {agent.get('summary','—')}<br/><br/>
                         <strong>Recommended Steps</strong><br/>
@@ -291,4 +307,4 @@ with col_result:
                 )
 
                 with st.expander("Raw data (debug)"):
-                    st.json({"classification": clf, "response": agent})
+                    st.json(data)
