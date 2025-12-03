@@ -7,7 +7,6 @@ import sys
 from pathlib import Path
 from typing import Any, Dict
 
-import requests
 import streamlit as st
 
 # ---------------------------------------------------------------------
@@ -23,6 +22,10 @@ for p in (STREAMLIT_DIR, ROOT):
 
 from theme import PALETTE, inject_base_css  # type: ignore
 from config import settings  # type: ignore
+from backend.services.azure_client import (  # type: ignore
+    orchestrator_chat,
+    domain_agent_chat,
+)
 
 # ---------------------------------------------------------------------
 # Fallback department colors
@@ -35,79 +38,6 @@ except Exception:
         "HR": PALETTE["gold"],
         "Finance": PALETTE["teal"],
     }
-
-# ---------------------------------------------------------------------
-# Azure AI Foundry workflow configuration
-# ---------------------------------------------------------------------
-WORKFLOW_APP_NAME = "trinexa-classify-orchestrate"
-WORKFLOW_API_VERSION = "2025-11-15-preview"
-
-
-def get_foundry_workflow_url() -> str:
-    """
-    Build the ActivityProtocol URL for the TriNexa orchestrator workflow.
-    """
-    base = (settings.aiproject_endpoint or "").rstrip("/")
-    if not base:
-        raise RuntimeError(
-            "AZURE_AIPROJECT_ENDPOINT is not configured. "
-            "Set it in Streamlit secrets under [azure]."
-        )
-
-    return (
-        f"{base}"
-        f"/applications/{WORKFLOW_APP_NAME}"
-        f"/protocols/activityprotocol"
-        f"?api-version={WORKFLOW_API_VERSION}"
-    )
-
-
-def call_foundry_workflow(ticket_payload: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Call the TriNexa workflow in Azure AI Foundry via ActivityProtocol.
-
-    ticket_payload is the UI payload:
-        {title, description, priority, department}
-    """
-    url = get_foundry_workflow_url()
-
-    # Use the Foundry Project API key from Streamlit secrets
-    api_key = settings.aiproject_api_key
-    if not api_key:
-        raise RuntimeError(
-            "AZURE_AIPROJECT_API_KEY is not configured. "
-            "Set it in Streamlit secrets under [azure]."
-        )
-
-    headers = {
-        "Content-Type": "application/json",
-        "api-key": api_key,
-    }
-
-    body = {
-        "input": {
-            "title": ticket_payload.get("title"),
-            "description": ticket_payload.get("description"),
-            "priority": ticket_payload.get("priority"),
-            "department": ticket_payload.get("department"),
-            # Pass the full ticket as well in case the workflow expects it
-            "ticket": ticket_payload,
-        }
-    }
-
-    resp = requests.post(url, json=body, headers=headers, timeout=40)
-    if not resp.ok:
-        try:
-            err_json = resp.json()
-        except Exception:
-            err_json = resp.text
-        raise RuntimeError(f"Error {resp.status_code}: {err_json}")
-
-    data = resp.json()
-    # Standard ActivityProtocol shape: { "status": "...", "outputs": { ... } }
-    outputs = data.get("outputs") or data
-    return outputs
-
 
 # ---------------------------------------------------------------------
 # Fake response for Dev Mode (no Azure calls)
@@ -123,8 +53,8 @@ def fake_orchestrator_response(payload: Dict[str, Any], dept: str) -> Dict[str, 
             "confidence": 0.92,
             "rationale": (
                 "Dev mode: canned classification response. "
-                "In live mode, the TriNexa workflow would classify and route "
-                "this ticket via Azure AI Foundry."
+                "In live mode, the TriNexa classifier + orchestrator would "
+                "evaluate and route this ticket using Azure OpenAI."
             ),
         },
         "response": {
@@ -133,7 +63,8 @@ def fake_orchestrator_response(payload: Dict[str, Any], dept: str) -> Dict[str, 
             "summary": f"Dev-mode response for {dept}. Summary: {summary}",
             "steps": (
                 "- This is a simulated response because Dev Mode is enabled.\n"
-                f"- In live mode, TriNexa would invoke the {dept} domain agent.\n"
+                f"- In live mode, TriNexa would invoke the {dept} domain agent "
+                "through Azure OpenAI.\n"
             ),
         },
     }
@@ -154,6 +85,9 @@ TriNexa will:
 - Classify intent  
 - Route to IT / HR / Finance agents  
 - Aggregate responses back to the user  
+
+In **Live Mode**, this page calls our **Azure OpenAI** deployments
+(`gpt-4.1`, `gpt-4o`, `gpt-4.1-mini`) via the shared backend helper.
 """
 )
 
@@ -169,12 +103,12 @@ with col1:
     st.checkbox(
         "Force Dev Mode (local demo)",
         key="force_dev_mode",
-        help="Use canned responses instead of calling Azure AI Foundry.",
+        help="Use canned responses instead of calling Azure OpenAI.",
     )
 
 effective_dev_mode = settings.DEV_MODE or st.session_state.force_dev_mode
 
-# Mirror into env so other helpers can see it if needed
+# Mirror into env so azure_client can see it if needed
 os.environ["TRIRESOLVE_DEV_MODE"] = "true" if effective_dev_mode else "false"
 
 with col2:
@@ -182,7 +116,7 @@ with col2:
         st.markdown(
             """
             <div class="tri-banner tri-banner-dev">
-                🧪 Dev Mode Active — using canned responses (no Foundry calls).
+                🧪 Dev Mode Active — using canned responses (no live Azure calls).
             </div>
             """,
             unsafe_allow_html=True,
@@ -191,8 +125,7 @@ with col2:
         st.markdown(
             """
             <div class="tri-banner tri-banner-live">
-                ✅ Live Mode — calling the TriNexa orchestrator workflow
-                via Azure AI Foundry.
+                ✅ Live Mode — calling the TriNexa orchestrator pipeline via Azure OpenAI.
             </div>
             """,
             unsafe_allow_html=True,
@@ -221,11 +154,12 @@ for col, (label, domain) in zip(cols, buttons):
     with col:
         selected = st.session_state.selected_domain == domain
         btn_type = "primary" if selected else "secondary"
+        # Yes, this is deprecated, but it's just a warning and the layout looks right.
         if st.button(
             label,
             type=btn_type,
             key=f"dept_{domain}",
-            use_container_width=True,  # deprecation warning is fine for now
+            use_container_width=True,
         ):
             st.session_state.selected_domain = domain
 
@@ -262,26 +196,60 @@ with col_result:
                 "title": title or "(no title)",
                 "description": description or "(no description)",
                 "priority": priority,
-                "department": st.session_state.selected_domain,
+                "domain": st.session_state.selected_domain,
             }
 
+            selected = st.session_state.selected_domain
+
+            # Build a unified message string for the models
+            user_message = (
+                f"Title: {payload['title']}\n"
+                f"Priority: {priority}\n"
+                f"Details: {payload['description']}"
+            )
+
             try:
-                if effective_dev_mode:
-                    data = fake_orchestrator_response(
-                        payload, st.session_state.selected_domain
-                    )
-                else:
-                    data = call_foundry_workflow(payload)
+                with st.spinner("Processing request via TriNexa..."):
+                    if effective_dev_mode:
+                        data = fake_orchestrator_response(payload, selected)
+                        clf = data.get("classification", {}) or {}
+                        agent = data.get("response", {}) or {}
+                    else:
+                        # Live Azure OpenAI call: orchestrator or specific domain agent
+                        if selected == "Auto":
+                            reply_text = orchestrator_chat(user_message)
+                            routed = "Auto (orchestrator decides)"
+                        else:
+                            reply_text = domain_agent_chat(
+                                user_message,
+                                domain=selected.lower(),
+                            )
+                            routed = selected
+
+                        # Synthesize a classification/agent structure for the UI
+                        clf = {
+                            "department": routed,
+                            "confidence": "—",
+                            "rationale": (
+                                "Live mode: routed using Azure OpenAI deployments. "
+                                "For this UI, routing metadata is inferred from your selection "
+                                "or the orchestrator."
+                            ),
+                        }
+                        agent = {
+                            "agent_name": "TriNexa Assistant",
+                            "department": routed,
+                            "summary": reply_text,
+                            "steps": "",
+                        }
+
             except Exception as exc:  # noqa: BLE001
-                # Plain-text error; no HTML flags to avoid TypeError
                 st.error(
-                    "⚠️ Error calling TriNexa workflow via Azure AI Foundry:\n\n"
-                    f"{exc}"
+                    "⚠️ Error calling Azure OpenAI. "
+                    "Please verify your AZURE_OPENAI_* settings in Streamlit secrets.\n\n"
+                    f"Details: {exc}"
                 )
             else:
-                clf = data.get("classification", {}) or {}
-                agent = data.get("response", {}) or {}
-
                 # Classification card
                 st.markdown(
                     f"""
@@ -300,7 +268,7 @@ with col_result:
                 dept = (
                     agent.get("department")
                     or clf.get("department")
-                    or payload.get("department")
+                    or payload.get("domain")
                     or "—"
                 )
                 dept_color = DEPT_COLORS.get(dept, PALETTE["deep_blue"])
@@ -322,5 +290,5 @@ with col_result:
                     unsafe_allow_html=True,
                 )
 
-                with st.expander("Raw workflow outputs (debug)"):
-                    st.json(data)
+                with st.expander("Raw data (debug)"):
+                    st.json({"classification": clf, "response": agent})
