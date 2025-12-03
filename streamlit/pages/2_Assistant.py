@@ -1,24 +1,28 @@
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 from typing import Any, Dict
-import requests
+
 import streamlit as st
 
-# -----------------------------------------------------------------------------
-# Ensure repo root on path
-# -----------------------------------------------------------------------------
+# -------------------------------------------------------------------------
+# Ensure repo root on path so we can import backend modules
+# -------------------------------------------------------------------------
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
-from theme import PALETTE, inject_base_css
+# Theme + styling
+from theme import PALETTE, inject_base_css  # type: ignore
 
-# -----------------------------------------------------------------------------
+# Backend orchestrator + schemas
+from backend.api.schemas import TicketCreate, TicketResult  # type: ignore
+from backend.services.orchestrator import process_ticket  # type: ignore
+
+# -------------------------------------------------------------------------
 # Department color fallback (in case theme.DEPT_COLORS missing)
-# -----------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 try:
     from theme import DEPT_COLORS  # type: ignore
 except Exception:
@@ -28,21 +32,14 @@ except Exception:
         "Finance": PALETTE["teal"],
     }
 
-# -----------------------------------------------------------------------------
-# Backend configuration (works on Streamlit Cloud + local)
-# -----------------------------------------------------------------------------
-BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
-TICKETS_ENDPOINT = f"{BACKEND_URL}/tickets/process"
-HEALTH_ENDPOINT = f"{BACKEND_URL}/health"
-
-# -----------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 # Fake response for Dev Mode
-# -----------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 def fake_orchestrator_response(payload: Dict[str, Any], dept: str) -> Dict[str, Any]:
     if dept == "Auto":
         dept = "IT"
 
-    summary = payload.get("description", "")[:80] + "..."
+    summary = (payload.get("description") or "")[:80] + "..."
     return {
         "classification": {
             "department": dept,
@@ -64,56 +61,64 @@ def fake_orchestrator_response(payload: Dict[str, Any], dept: str) -> Dict[str, 
         },
     }
 
-# -----------------------------------------------------------------------------
-# Call backend (real mode)
-# -----------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------
+# Call orchestrator directly (no HTTP)
+# -------------------------------------------------------------------------
 def submit_ticket(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Call the Python orchestrator directly instead of going through FastAPI.
+
+    This uses the same `process_ticket` pipeline that the FastAPI /tickets/process
+    endpoint would call, but runs in-process inside Streamlit.
+    """
     try:
-        resp = requests.post(TICKETS_ENDPOINT, json=payload, timeout=10)
-        resp.raise_for_status()
-        return resp.json()
+        # Map UI payload -> TicketCreate model
+        selected_domain = payload.get("domain")
+        if selected_domain == "Auto":
+            selected_domain = None  # let classifier decide
+
+        ticket = TicketCreate(
+            title=payload.get("title") or "ticket",
+            description=payload.get("description") or "",
+            priority=payload.get("priority") or "Medium",
+            # If your TicketCreate doesn't have a `domain` field,
+            # you can remove this argument.
+            domain=selected_domain,  # type: ignore[arg-type]
+        )
+
+        result: TicketResult = process_ticket(ticket, force_dev=False)
+        # Convert Pydantic model to plain dict for the UI
+        return result.model_dump()  # type: ignore[attr-defined]
+
     except Exception as exc:
         return {"error": str(exc)}
 
-# -----------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------
 # Shared styles
-# -----------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 inject_base_css()
 
-# -----------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 # UI Header
-# -----------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 st.title("🧩 TriNexa Assistant")
 
 st.write(
     """
     This is the **front door** to the orchestration layer.
 
-    TriNexa will eventually:
+    TriNexa will:
     - Classify intent  
     - Route to IT / HR / Finance agents  
     - Aggregate responses back to the user  
     """
 )
 
-# -----------------------------------------------------------------------------
-# Backend health
-# -----------------------------------------------------------------------------
-@st.cache_data(ttl=20)
-def get_backend_health(url: str) -> Dict[str, Any] | None:
-    try:
-        r = requests.get(f"{url}/health", timeout=5)
-        r.raise_for_status()
-        return r.json()
-    except Exception:
-        return None
-
-health = get_backend_health(BACKEND_URL)
-backend_dev_mode = bool(health and health.get("dev_mode"))
-
-# -----------------------------------------------------------------------------
-# Dev mode toggle
-# -----------------------------------------------------------------------------
+# -------------------------------------------------------------------------
+# Dev mode toggle (now purely manual)
+# -------------------------------------------------------------------------
 if "force_dev_mode" not in st.session_state:
     st.session_state.force_dev_mode = False
 
@@ -123,26 +128,17 @@ with col1:
     st.checkbox(
         "Force Dev Mode (local demo)",
         key="force_dev_mode",
-        help="Use canned responses even if backend is offline.",
+        help="Use canned responses instead of calling Azure / Foundry.",
     )
 
-effective_dev_mode = backend_dev_mode or st.session_state.force_dev_mode
+effective_dev_mode = bool(st.session_state.force_dev_mode)
 
 with col2:
-    if health is None:
+    if effective_dev_mode:
         st.markdown(
             """
             <div class="tri-banner tri-banner-dev">
-                ⚠️ Backend unreachable — FastAPI not running.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    elif effective_dev_mode:
-        st.markdown(
-            """
-            <div class="tri-banner tri-banner-dev">
-                🧪 Dev Mode Active — using canned responses.
+                🧪 Dev Mode Active — using canned responses only.
             </div>
             """,
             unsafe_allow_html=True,
@@ -151,15 +147,16 @@ with col2:
         st.markdown(
             """
             <div class="tri-banner tri-banner-live">
-                ✅ Backend running in Live Mode.
+                ✅ Live Mode — calling the TriNexa orchestrator pipeline
+                (Azure AI Foundry / Azure OpenAI).
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-# -----------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 # Department selector buttons
-# -----------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 if "selected_domain" not in st.session_state:
     st.session_state.selected_domain = "Auto"
 
@@ -176,14 +173,14 @@ buttons = [
 for col, (label, domain) in zip(cols, buttons):
     with col:
         selected = st.session_state.selected_domain == domain
-        if st.button(label, type="primary" if selected else "secondary", use_container_width=True):
+        if st.button(label, type="primary" if selected else "secondary"):
             st.session_state.selected_domain = domain
 
 st.markdown("---")
 
-# -----------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 # Ticket Form
-# -----------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 col_form, col_result = st.columns([1.2, 1.8])
 
 with col_form:
@@ -209,14 +206,15 @@ with col_result:
         }
 
         with st.spinner("Processing request via TriNexa..."):
-            if effective_dev_mode or health is None:
+            if effective_dev_mode:
                 data = fake_orchestrator_response(payload, st.session_state.selected_domain)
             else:
                 data = submit_ticket(payload)
 
         if data.get("error"):
             st.error(
-                f"⚠️ Error contacting backend at {TICKETS_ENDPOINT}\n\n{data.get('error')}"
+                "⚠️ Error running TriNexa orchestrator:\n\n"
+                f"{data.get('error')}"
             )
         else:
             clf = data.get("classification", {})
