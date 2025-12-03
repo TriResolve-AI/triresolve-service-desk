@@ -1,5 +1,3 @@
-# streamlit/pages/2_Assistant.py
-
 from __future__ import annotations
 
 import os
@@ -10,11 +8,15 @@ from typing import Any, Dict
 import streamlit as st
 
 # ---------------------------------------------------------------------
-# Ensure repo root is on the path
+# Ensure both /streamlit and repo root are on sys.path
 # ---------------------------------------------------------------------
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.append(str(ROOT))
+HERE = Path(__file__).resolve()
+STREAMLIT_DIR = HERE.parents[1]   # .../streamlit
+ROOT = HERE.parents[2]            # repo root
+
+for p in (STREAMLIT_DIR, ROOT):
+    if str(p) not in sys.path:
+        sys.path.append(str(p))
 
 from theme import PALETTE, inject_base_css  # type: ignore
 from config import settings  # type: ignore
@@ -284,3 +286,4 @@ with col_result:
 
                 with st.expander("Raw data (debug)"):
                     st.json({"classification": clf, "response": agent})
+
