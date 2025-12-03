@@ -164,13 +164,14 @@ with col_res:
             "department": st.session_state.selected_domain,
         }
 
-        if effective_dev:
+                if effective_dev:
             result = fake_response(payload, st.session_state.selected_domain)
         else:
             try:
                 result = call_foundry_workflow(payload)
             except Exception as e:
-                st.error(f"⚠️ Error calling Foundry workflow:<br>{e}", unsafe_allow_html=True)
+                # Use plain text error (no HTML) to avoid TypeError
+                st.error(f"⚠️ Error calling Foundry workflow:\n\n{e}")
                 st.stop()
 
         clf = result.get("classification", {})
@@ -207,3 +208,4 @@ with col_res:
 
         with st.expander("Raw output (debug)"):
             st.json(result)
+
