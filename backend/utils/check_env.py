@@ -1,77 +1,41 @@
-"""
-Environment variable validator for TriResolve Service Desk.
+name: Environment Variable Check
 
-This module checks that all required Azure OpenAI environment variables
-are set before the application starts.
-"""
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
 
-import os
-import sys
+jobs:
+  env-check:
+    runs-on: ubuntu-latest
 
-# Required environment variables for Azure OpenAI integration
-REQUIRED_ENV_VARS = [
-    "AZURE_OPENAI_ENDPOINT",
-    "AZURE_OPENAI_API_KEY",
-    "AZURE_OPENAI_API_VERSION",
-    "AZURE_LOCATION",
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    # Core system agents
-    "AZURE_OPENAI_DEPLOYMENT_ORCHESTRATOR",
-    "AZURE_OPENAI_DEPLOYMENT_CLASSIFIER",
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
 
-    # Domain agents
-    "AZURE_OPENAI_DEPLOYMENT_HR",
-    "AZURE_OPENAI_DEPLOYMENT_IT",
-    "AZURE_OPENAI_DEPLOYMENT_FINANCE",
+      - name: Install dependencies
+        run: pip install python-dotenv
 
-    # Specialist agents
-    "AZURE_OPENAI_DEPLOYMENT_ARCHITECT",
-    "AZURE_OPENAI_DEPLOYMENT_SECURITY",
-    "AZURE_OPENAI_DEPLOYMENT_OPS",
-]
+      - name: Run env validation
+        env:
+          AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          AZURE_OPENAI_API_VERSION: ${{ secrets.AZURE_OPENAI_API_VERSION }}
+          AZURE_LOCATION: ${{ secrets.AZURE_LOCATION }}
 
+          AZURE_OPENAI_DEPLOYMENT_ORCHESTRATOR: ${{ secrets.AZURE_OPENAI_DEPLOYMENT_ORCHESTRATOR }}
+          AZURE_OPENAI_DEPLOYMENT_CLASSIFIER: ${{ secrets.AZURE_OPENAI_DEPLOYMENT_CLASSIFIER }}
+          AZURE_OPENAI_DEPLOYMENT_HR: ${{ secrets.AZURE_OPENAI_DEPLOYMENT_HR }}
+          AZURE_OPENAI_DEPLOYMENT_IT: ${{ secrets.AZURE_OPENAI_DEPLOYMENT_IT }}
+          AZURE_OPENAI_DEPLOYMENT_FINANCE: ${{ secrets.AZURE_OPENAI_DEPLOYMENT_FINANCE }}
+          AZURE_OPENAI_DEPLOYMENT_ARCHITECT: ${{ secrets.AZURE_OPENAI_DEPLOYMENT_ARCHITECT }}
+          AZURE_OPENAI_DEPLOYMENT_SECURITY: ${{ secrets.AZURE_OPENAI_DEPLOYMENT_SECURITY }}
+          AZURE_OPENAI_DEPLOYMENT_OPS: ${{ secrets.AZURE_OPENAI_DEPLOYMENT_OPS }}
 
-def check_env() -> bool:
-    """
-    Check that all required environment variables are set.
-
-    Returns:
-        True if all required environment variables are set, False otherwise.
-    """
-    missing = []
-    empty = []
-
-    for var in REQUIRED_ENV_VARS:
-        value = os.environ.get(var)
-        if value is None:
-            missing.append(var)
-        elif str(value).strip() == "":
-            empty.append(var)
-
-    if missing or empty:
-        print("\n❌  ERROR: Environment validation failed.\n")
-
-        if missing:
-            print("Missing variables:")
-            for var in missing:
-                print(f"  - {var}")
-
-        if empty:
-            print("\nEmpty variables (defined but blank):")
-            for var in empty:
-                print(f"  - {var}")
-
-        print("\nConfigure these values in:")
-        print("  • Streamlit secrets.toml (cloud deploy)")
-        print("  • Local .env (development)")
-        print("  • GitHub Secrets (CI)\n")
-
-        return False
-
-    print("✅ SUCCESS: All required environment variables are set.")
-    return True
-
-
-if __name__ == "__main__":
-    if not check_env():
-        sys.exit(1)
+        run: python backend/check_env.py
